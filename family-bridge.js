@@ -66,6 +66,21 @@ window.familyUpdateItem=async item=>{
   notice('Nome e descrizione aggiornati online.');
  }catch(err){notice('Modifica salvata solo in locale: '+err.message+'. Non premere Aggiorna inventario.')}
 };
+window.familyDeleteItem=async id=>{
+ if(!token||!house){notice('Accedi a Casa di famiglia prima di eliminare.');return false}
+ if(!cloudIds.has(id)){notice('Oggetto non ancora sincronizzato: eliminazione online non necessaria.');return true}
+ if(!navigator.onLine){notice('Offline: eliminazione annullata.');return false}
+ try{
+  const response=await fetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(id)+'&home_id=eq.'+encodeURIComponent(house.id),{
+   method:'DELETE',headers:{apikey:key,Authorization:'Bearer '+token,Prefer:'return=representation'}
+  });
+  const rows=await response.json().catch(()=>null);
+  if(!response.ok||!Array.isArray(rows)||rows.length!==1)throw Error(rows?.message||'Eliminazione non confermata dal server');
+  cloudIds.delete(id);
+  notice('Oggetto eliminato anche da Casa di famiglia.');
+  return true;
+ }catch(e){notice('Eliminazione non eseguita: '+e.message);return false}
+};
 el('familyRename').onclick=async()=>{
  if(!token||!house)return;
  const row=db.items.find(i=>i.name==='Prova sincronizzazione'&&cloudIds.has(i.id));
