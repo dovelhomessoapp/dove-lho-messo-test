@@ -49,6 +49,8 @@ async function uploadNew(){
    const res=await fetch(base+'/rest/v1/items?on_conflict=id',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});
    if(!res.ok){const err=await res.json().catch(()=>({}));throw Error(err.message||'Errore salvataggio')}
    cloudIds.add(i.id);
+   const confirmed=await get('/rest/v1/items?select=id,location_id&id=eq.'+encodeURIComponent(i.id)+'&home_id=eq.'+encodeURIComponent(house.id),token);
+   if(confirmed.length!==1||confirmed[0].location_id!==(i.place||null))throw Error('Posizione non confermata online per '+i.name);
   }
   await load();
  }catch(e){notice('Sincronizzazione da riprovare: '+e.message)}
