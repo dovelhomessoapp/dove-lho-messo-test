@@ -66,6 +66,15 @@ window.familyUpdateItem=async item=>{
   notice('Nome e descrizione aggiornati online.');
  }catch(err){notice('Modifica salvata solo in locale: '+err.message+'. Non premere Aggiorna inventario.')}
 };
+window.familyCreatePlace=async place=>{
+ if(!token||!house){notice('Posizione salvata solo in locale: accedi a Casa di famiglia.');return}
+ try{
+  const result=await fetch(base+'/rest/v1/locations?on_conflict=id',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify({id:place.id,home_id:house.id,name:place.name})});
+  const rows=await result.json().catch(()=>null);
+  if(!result.ok||!Array.isArray(rows)||rows.length!==1)throw Error(rows?.message||'Salvataggio non confermato');
+  notice('Posizione salvata su Casa di famiglia.');
+ }catch(err){notice('Posizione soltanto in locale: '+err.message)}
+};
 window.familyDeleteItem=async id=>{
  if(!token||!house){notice('Accedi a Casa di famiglia prima di eliminare.');return false}
  if(!cloudIds.has(id)){notice('Oggetto non ancora sincronizzato: eliminazione online non necessaria.');return true}
