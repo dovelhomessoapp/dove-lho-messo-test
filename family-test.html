@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Dove l'ho messo? | Accesso famiglia</title>
+<style>body{font:16px system-ui;background:#faf4ff;color:#4b2b66;margin:0;padding:24px}.panel{max-width:460px;margin:40px auto;padding:24px;background:white;border-radius:20px;box-shadow:0 3px 16px #8c65b626}h1{font-size:24px}label{display:block;margin-top:15px}input{width:100%;box-sizing:border-box;padding:13px;margin-top:5px;border-radius:12px;border:1px solid #c8b2db;font:inherit}button{margin-top:16px;border:0;border-radius:12px;background:#9e68cb;color:white;padding:13px 20px;font:inherit}button:disabled{opacity:.5}.hint{font-size:14px;color:#706078}#status{white-space:pre-wrap}</style></head>
+<body><main class="panel"><h1>🏡 Dove l'ho messo? — Famiglia</h1><p class="hint">Verifica dell'accesso. Questa pagina non modifica né elimina oggetti, libri o posizioni.</p>
+<form id="login"><label>Email<input id="email" type="email" autocomplete="email" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button id="enter" type="submit">Accedi</button></form>
+<section id="account" hidden><p id="who"></p><h2>Case accessibili</h2><ul id="houses"></ul><button id="exit" type="button">Esci</button></section><p id="status" role="status" aria-live="polite"></p>
+</main><script src="./family-test.js"></script></body></html>
