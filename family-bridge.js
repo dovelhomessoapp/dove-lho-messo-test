@@ -10,6 +10,14 @@ const el=id=>document.getElementById(id);
 let token=null,house=null,sending=false;
 const cloudIds=new Set();
 const cloudPlaceIds=new Set();
+const pendingPhotos=new Set();
+async function uploadPhoto(item){
+ const path=house.id+'/'+item.id+'.jpg';
+ const binary=await (await fetch(item.photo)).blob();
+ const response=await fetch(base+'/storage/v1/object/foto-oggetti/'+path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'image/jpeg'},body:binary});
+ if(!response.ok)throw Error((await response.json().catch(()=>({}))).message||'Upload non riuscito');
+ return path;
+}
 const notice=s=>el('familyMsg').textContent=s;
 async function get(path,t){const r=await fetch(base+path,{headers:{apikey:key,Authorization:'Bearer '+t},cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.message||'Errore di lettura');return d}
 async function load(){
