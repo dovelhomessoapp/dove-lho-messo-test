@@ -16,6 +16,7 @@ const pendingPhotos=new Set();
 const EDIT_KEY='dlm-test-offline-edits-v1';
 const pendingEdits=new Map(Object.entries(JSON.parse(localStorage.getItem(EDIT_KEY)||'{}')));
 const saveEdits=()=>localStorage.setItem(EDIT_KEY,JSON.stringify(Object.fromEntries(pendingEdits)));
+const deletingIds=new Set();
 async function uploadPhoto(item){
  const path=house.id+'/'+item.id+'-'+crypto.randomUUID()+'.jpg';
  const binary=await (await fetch(item.photo)).blob();
@@ -81,7 +82,7 @@ async function uploadNew(){
  if(!token||!house||sending||!navigator.onLine)return;
  sending=true;
  try{
-  const todo=db.items.filter(i=>i.name&&/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(i.id)&&!cloudIds.has(i.id));
+  const todo=db.items.filter(i=>i.name&&/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(i.id)&&!cloudIds.has(i.id)&&!deletingIds.has(i.id));
   for(const i of todo){
    if(i.photo){notice('Foto non sincronizzate: oggetto mantenuto in locale.');continue}
    if(i.place&&!cloudPlaceIds.has(i.place)){notice('Posizione locale da sincronizzare prima dell’oggetto.');continue}
@@ -150,16 +151,21 @@ window.familyDeleteItem=async id=>{
  if(!token||!house){notice('Accedi a Casa di famiglia prima di eliminare.');return false}
  if(!cloudIds.has(id)){notice('Oggetto non ancora sincronizzato: eliminazione online non necessaria.');return true}
  if(!navigator.onLine){notice('Offline: eliminazione annullata.');return false}
+ deletingIds.add(id);
  try{
   const response=await fetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(id)+'&home_id=eq.'+encodeURIComponent(house.id),{
    method:'DELETE',headers:{apikey:key,Authorization:'Bearer '+token,Prefer:'return=representation'}
   });
   const rows=await response.json().catch(()=>null);
   if(!response.ok||!Array.isArray(rows)||rows.length!==1)throw Error(rows?.message||'Eliminazione non confermata dal server');
+  const check=await get('/rest/v1/items?select=id&id=eq.'+encodeURIComponent(id)+'&home_id=eq.'+encodeURIComponent(house.id),token);
+  if(check.length)throw Error('L’oggetto risulta ancora online: eliminazione non confermata');
   cloudIds.delete(id);
-  notice('Oggetto eliminato anche da Casa di famiglia.');
+  pendingEdits.delete(id);saveEdits();
+  notice('Eliminazione confermata anche online.');
   return true;
  }catch(e){notice('Eliminazione non eseguita: '+e.message);return false}
+ finally{setTimeout(()=>deletingIds.delete(id),1500)}
 };
 el('familyRename').onclick=async()=>{
  if(!token||!house)return;
