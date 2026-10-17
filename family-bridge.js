@@ -20,6 +20,8 @@ const deletingIds=new Set();
 const CREATE_KEY='dlm-test-pending-creates-v1';
 const pendingCreates=new Set(JSON.parse(localStorage.getItem(CREATE_KEY)||'[]'));
 const saveCreates=()=>localStorage.setItem(CREATE_KEY,JSON.stringify([...pendingCreates]));
+const seenIds=new Set(JSON.parse(localStorage.getItem('dlm-test-seen-v1')||'[]'));
+const saveSeen=()=>localStorage.setItem('dlm-test-seen-v1',JSON.stringify([...seenIds]));
 async function uploadPhoto(item){
  const path=house.id+'/'+item.id+'-'+crypto.randomUUID()+'.jpg';
  const binary=await (await fetch(item.photo)).blob();
