@@ -111,7 +111,7 @@ async function syncEdits(){
   }catch(e){notice('Modifica in attesa: '+e.message);break}
  }
 }
-window.familySyncQueue=()=>{for(const i of db.items){if(i.name&&!cloudIds.has(i.id)&&!pendingCreates.has(i.id)&&!deletingIds.has(i.id)){pendingCreates.add(i.id);saveCreates()}}if(token&&house){if(navigator.onLine)void syncEdits().then(uploadNew);else notice('Oggetto salvato sul telefono: sarà sincronizzato quando torni online.')}};
+window.familySyncQueue=id=>{if(id&&!cloudIds.has(id)&&!pendingCreates.has(id)){pendingCreates.add(id);saveCreates()}if(token&&house){if(navigator.onLine)void syncEdits().then(uploadNew);else notice('Oggetto salvato sul telefono: sarà sincronizzato quando torni online.')}};
 window.addEventListener('online',()=>{if(token&&house){void syncEdits().then(uploadNew)}});
 window.familyUpdateItem=async item=>{
  pendingEdits.set(item.id,{name:item.name,desc:item.desc,place:item.place});saveEdits();
