@@ -46,8 +46,8 @@ async function load(){
  // Aggiorna solo la copia locale usata dalle schermate dell'app di prova.
  objects.forEach(i=>cloudIds.add(i.id));
  places.forEach(p=>cloudPlaceIds.add(p.id));
- const pending=db.items.filter(i=>!cloudIds.has(i.id)||pendingPhotos.has(i.id));
- db.items=[...objects.filter(i=>!pendingPhotos.has(i.id)).map(i=>({id:i.id,kind:i.kind,name:i.title,author:i.author||'',barcode:i.isbn||'',desc:i.description||'',photo:i.image_url||'',place:i.location_id||'',value:i.estimated_value??'',created:Date.parse(i.created_at)||Date.now()})),...pending];
+ const pending=db.items.filter(i=>!cloudIds.has(i.id)||pendingPhotos.has(i.id)||pendingEdits.has(i.id));
+ db.items=[...objects.filter(i=>!pendingPhotos.has(i.id)&&!pendingEdits.has(i.id)).map(i=>({id:i.id,kind:i.kind,name:i.title,author:i.author||'',barcode:i.isbn||'',desc:i.description||'',photo:i.image_url||'',place:i.location_id||'',value:i.estimated_value??'',created:Date.parse(i.created_at)||Date.now()})),...pending];
  db.places=[...places.map(p=>({id:p.id,name:p.name})),...db.places.filter(p=>!places.some(c=>c.id===p.id))];
  localStorage.setItem('dlm-test-v1',JSON.stringify(db));
  renderStats();renderPlaces();renderItems();
