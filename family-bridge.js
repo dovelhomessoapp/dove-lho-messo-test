@@ -12,7 +12,7 @@ const cloudIds=new Set();
 const cloudPlaceIds=new Set();
 const pendingPhotos=new Set();
 async function uploadPhoto(item){
- const path=house.id+'/'+item.id+'.jpg';
+ const path=house.id+'/'+item.id+'-'+crypto.randomUUID()+'.jpg';
  const binary=await (await fetch(item.photo)).blob();
  const response=await fetch(base+'/storage/v1/object/foto-oggetti/'+path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'image/jpeg'},body:binary});
  if(!response.ok)throw Error((await response.json().catch(()=>({}))).message||'Upload non riuscito');
@@ -82,6 +82,18 @@ window.familyUpdateItem=async item=>{
   });
   const result=await res.json().catch(()=>null);
   if(!res.ok||!Array.isArray(result)||result.length!==1)throw Error(result?.message||'Conferma server non ricevuta');
+  if(item.photo&&item.photo.startsWith('data:image/')){
+   pendingPhotos.add(item.id);
+   try{
+    const path=await uploadPhoto(item);
+    const p=await fetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(item.id)+'&home_id=eq.'+encodeURIComponent(house.id),{method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({image_url:path})});
+    const a=await p.json().catch(()=>null);
+    if(!p.ok||!Array.isArray(a)||a.length!==1)throw Error(a?.message||'Associazione foto non confermata');
+    pendingPhotos.delete(item.id);
+    notice('Fotografia salvata online.');
+   }catch(err){notice('Foto salvata solo sul telefono: '+err.message+'. Non aggiornare inventario.')}
+   return;
+  }
   notice('Nome, descrizione e posizione aggiornati online.');
  }catch(err){notice('Modifica salvata solo in locale: '+err.message+'. Non premere Aggiorna inventario.')}
 };
