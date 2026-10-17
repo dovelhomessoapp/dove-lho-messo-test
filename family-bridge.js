@@ -32,14 +32,14 @@ el('familyForm').onsubmit=async e=>{
  const houses=await get('/rest/v1/homes?select=id,name',d.access_token);
  if(houses.length!==1)throw Error('Questa prova richiede una sola casa');
  token=d.access_token;house=houses[0];el('familyHouse').textContent=house.name;
- await load();el('familyForm').hidden=true;el('familyOnline').hidden=false;
+ await load();await uploadNew();el('familyForm').hidden=true;el('familyOnline').hidden=false;
  }catch(err){notice('Errore: '+err.message)}finally{btn.disabled=false}
 };
 async function uploadNew(){
  if(!token||!house||sending||!navigator.onLine)return;
  sending=true;
  try{
-  const todo=db.items.filter(i=>i.name&&!cloudIds.has(i.id));
+  const todo=db.items.filter(i=>i.name&&/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(i.id)&&!cloudIds.has(i.id));
   for(const i of todo){
    if(i.photo){notice('Foto non sincronizzate: oggetto mantenuto in locale.');continue}
    if(i.place&&!cloudIds.has(i.place)){notice('Posizione locale da sincronizzare prima dell’oggetto.');continue}
@@ -53,6 +53,6 @@ async function uploadNew(){
  finally{sending=false}
 }
 window.familySyncQueue=()=>{if(token&&house)void uploadNew()};
-el('familyReload').onclick=()=>load().catch(err=>notice(err.message));
+el('familyReload').onclick=()=>load().then(uploadNew).catch(err=>notice(err.message));
 el('familyExit').onclick=()=>{token=null;house=null;el('familyForm').hidden=false;el('familyOnline').hidden=true;notice('Disconnessa. I dati già caricati restano in questa copia di prova.')};
 })();
