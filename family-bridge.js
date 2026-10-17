@@ -74,7 +74,7 @@ el('familyForm').onsubmit=async e=>{
  const houses=await get('/rest/v1/homes?select=id,name',d.access_token);
  if(houses.length!==1)throw Error('Questa prova richiede una sola casa');
  token=d.access_token;refreshToken=d.refresh_token;localStorage.setItem(SESSION_KEY,refreshToken);house=houses[0];el('familyHouse').textContent=house.name;
- await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
+ await syncEdits();await syncEdits();await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
  }catch(err){notice('Errore: '+err.message)}finally{btn.disabled=false}
 };
 async function uploadNew(){
@@ -107,8 +107,8 @@ async function syncEdits(){
   }catch(e){notice('Modifica in attesa: '+e.message);break}
  }
 }
-window.familySyncQueue=()=>{if(token&&house){if(navigator.onLine)void uploadNew();else notice('Oggetto salvato sul telefono: sarà sincronizzato quando torni online.')}};
-window.addEventListener('online',()=>{if(token&&house){void uploadNew();void syncEdits()}});
+window.familySyncQueue=()=>{if(token&&house){if(navigator.onLine)void syncEdits().then(uploadNew);else notice('Oggetto salvato sul telefono: sarà sincronizzato quando torni online.')}};
+window.addEventListener('online',()=>{if(token&&house){void syncEdits().then(uploadNew)}});
 window.familyUpdateItem=async item=>{
  pendingEdits.set(item.id,{name:item.name,desc:item.desc,place:item.place});saveEdits();
  if(!token||!house||!cloudIds.has(item.id)){notice('Modifica salvata soltanto sul dispositivo di prova.');return}
