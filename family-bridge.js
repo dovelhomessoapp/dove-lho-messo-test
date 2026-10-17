@@ -50,7 +50,7 @@ async function load(){
  const places=await get('/rest/v1/locations?select=id,name&home_id=eq.'+house.id,token);
  for(const i of objects){if(i.image_url&&i.image_url.startsWith(house.id+'/')){try{i.image_url=await signPhoto(i.image_url)}catch(e){i.image_url='';notice('Foto non disponibile')}}}
  // Aggiorna solo la copia locale usata dalle schermate dell'app di prova.
- cloudIds.clear();objects.forEach(i=>{cloudIds.add(i.id);if(pendingCreates.delete(i.id))saveCreates()});
+ cloudIds.clear();objects.forEach(i=>{cloudIds.add(i.id);seenIds.add(i.id);if(pendingCreates.delete(i.id))saveCreates()});saveSeen();
  places.forEach(p=>cloudPlaceIds.add(p.id));
  const pending=db.items.filter(i=>pendingCreates.has(i.id)||pendingPhotos.has(i.id)||pendingEdits.has(i.id));
  db.items=[...objects.filter(i=>!pendingPhotos.has(i.id)&&!pendingEdits.has(i.id)).map(i=>({id:i.id,kind:i.kind,name:i.title,author:i.author||'',barcode:i.isbn||'',desc:i.description||'',photo:i.image_url||'',place:i.location_id||'',value:i.estimated_value??'',created:Date.parse(i.created_at)||Date.now()})),...pending];
@@ -87,14 +87,14 @@ async function uploadNew(){
  if(!token||!house||sending||!navigator.onLine)return;
  sending=true;
  try{
-  const todo=db.items.filter(i=>i.name&&/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(i.id)&&pendingCreates.has(i.id)&&!cloudIds.has(i.id)&&!deletingIds.has(i.id));
+  const todo=db.items.filter(i=>i.name&&/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(i.id)&&pendingCreates.has(i.id)&&!seenIds.has(i.id)&&!cloudIds.has(i.id)&&!deletingIds.has(i.id));
   for(const i of todo){
    if(i.photo){notice('Foto non sincronizzate: oggetto mantenuto in locale.');continue}
    if(i.place&&!cloudPlaceIds.has(i.place)){notice('Posizione locale da sincronizzare prima dell’oggetto.');continue}
    const row={id:i.id,home_id:house.id,title:i.name,kind:i.kind==='book'?'book':'object',author:i.author||null,isbn:i.kind==='book'?i.barcode||null:null,description:i.desc||null,location_id:i.place||null,estimated_value:i.value===''?null:Number(i.value),created_by:null};
    const res=await fetch(base+'/rest/v1/items?on_conflict=id',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});
    if(!res.ok){const err=await res.json().catch(()=>({}));throw Error(err.message||'Errore salvataggio')}
-   cloudIds.add(i.id);pendingCreates.delete(i.id);saveCreates();
+   cloudIds.add(i.id);seenIds.add(i.id);saveSeen();pendingCreates.delete(i.id);saveCreates();
    const confirmed=await get('/rest/v1/items?select=id,location_id&id=eq.'+encodeURIComponent(i.id)+'&home_id=eq.'+encodeURIComponent(house.id),token);
    if(confirmed.length!==1||confirmed[0].location_id!==(i.place||null))throw Error('Posizione non confermata online per '+i.name);
   }
