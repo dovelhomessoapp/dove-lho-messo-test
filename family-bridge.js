@@ -9,6 +9,7 @@ home.append(panel);
 const el=id=>document.getElementById(id);
 let token=null,house=null,sending=false;
 const cloudIds=new Set();
+const cloudPlaceIds=new Set();
 const notice=s=>el('familyMsg').textContent=s;
 async function get(path,t){const r=await fetch(base+path,{headers:{apikey:key,Authorization:'Bearer '+t},cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.message||'Errore di lettura');return d}
 async function load(){
@@ -16,6 +17,7 @@ async function load(){
  const places=await get('/rest/v1/locations?select=id,name&home_id=eq.'+house.id,token);
  // Aggiorna solo la copia locale usata dalle schermate dell'app di prova.
  objects.forEach(i=>cloudIds.add(i.id));
+ places.forEach(p=>cloudPlaceIds.add(p.id));
  const pending=db.items.filter(i=>!cloudIds.has(i.id));
  db.items=[...objects.map(i=>({id:i.id,kind:i.kind,name:i.title,author:i.author||'',barcode:i.isbn||'',desc:i.description||'',photo:i.image_url||'',place:i.location_id||'',value:i.estimated_value??'',created:Date.parse(i.created_at)||Date.now()})),...pending];
  db.places=[...places.map(p=>({id:p.id,name:p.name})),...db.places.filter(p=>!places.some(c=>c.id===p.id))];
@@ -42,7 +44,7 @@ async function uploadNew(){
   const todo=db.items.filter(i=>i.name&&/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(i.id)&&!cloudIds.has(i.id));
   for(const i of todo){
    if(i.photo){notice('Foto non sincronizzate: oggetto mantenuto in locale.');continue}
-   if(i.place&&!cloudIds.has(i.place)){notice('Posizione locale da sincronizzare prima dell’oggetto.');continue}
+   if(i.place&&!cloudPlaceIds.has(i.place)){notice('Posizione locale da sincronizzare prima dell’oggetto.');continue}
    const row={id:i.id,home_id:house.id,title:i.name,kind:i.kind==='book'?'book':'object',author:i.author||null,isbn:i.kind==='book'?i.barcode||null:null,description:i.desc||null,location_id:i.place||null,estimated_value:i.value===''?null:Number(i.value),created_by:null};
    const res=await fetch(base+'/rest/v1/items?on_conflict=id',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});
    if(!res.ok){const err=await res.json().catch(()=>({}));throw Error(err.message||'Errore salvataggio')}
@@ -59,11 +61,11 @@ window.familyUpdateItem=async item=>{
  try{
   const res=await fetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(item.id)+'&home_id=eq.'+encodeURIComponent(house.id),{
    method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},
-   body:JSON.stringify({title:item.name,description:item.desc||null})
+   body:JSON.stringify({title:item.name,description:item.desc||null,location_id:item.place&&cloudPlaceIds.has(item.place)?item.place:null})
   });
   const result=await res.json().catch(()=>null);
   if(!res.ok||!Array.isArray(result)||result.length!==1)throw Error(result?.message||'Conferma server non ricevuta');
-  notice('Nome e descrizione aggiornati online.');
+  notice('Nome, descrizione e posizione aggiornati online.');
  }catch(err){notice('Modifica salvata solo in locale: '+err.message+'. Non premere Aggiorna inventario.')}
 };
 window.familyCreatePlace=async place=>{
@@ -72,6 +74,7 @@ window.familyCreatePlace=async place=>{
   const result=await fetch(base+'/rest/v1/locations?on_conflict=id',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify({id:place.id,home_id:house.id,name:place.name})});
   const rows=await result.json().catch(()=>null);
   if(!result.ok||!Array.isArray(rows)||rows.length!==1)throw Error(rows?.message||'Salvataggio non confermato');
+  cloudPlaceIds.add(place.id);
   notice('Posizione salvata su Casa di famiglia.');
  }catch(err){notice('Posizione soltanto in locale: '+err.message)}
 };
