@@ -96,8 +96,19 @@ async function uploadNew(){
  }catch(e){notice('Sincronizzazione da riprovare: '+e.message)}
  finally{sending=false}
 }
+async function syncEdits(){
+ if(!token||!house||!navigator.onLine)return;
+ for(const [id,edit] of pendingEdits){
+  try{
+   const r=await fetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(id)+'&home_id=eq.'+encodeURIComponent(house.id),{method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({title:edit.name,description:edit.desc||null,location_id:edit.place&&cloudPlaceIds.has(edit.place)?edit.place:null})});
+   const rows=await r.json();
+   if(!r.ok||!Array.isArray(rows)||rows.length!==1)throw Error(rows?.message||'Aggiornamento non confermato');
+   pendingEdits.delete(id);saveEdits();notice('Modifica offline sincronizzata.');
+  }catch(e){notice('Modifica in attesa: '+e.message);break}
+ }
+}
 window.familySyncQueue=()=>{if(token&&house){if(navigator.onLine)void uploadNew();else notice('Oggetto salvato sul telefono: sarà sincronizzato quando torni online.')}};
-window.addEventListener('online',()=>{if(token&&house)void uploadNew()});
+window.addEventListener('online',()=>{if(token&&house){void uploadNew();void syncEdits()}});
 window.familyUpdateItem=async item=>{
  pendingEdits.set(item.id,{name:item.name,desc:item.desc,place:item.place});saveEdits();
  if(!token||!house||!cloudIds.has(item.id)){notice('Modifica salvata soltanto sul dispositivo di prova.');return}
@@ -167,7 +178,7 @@ el('familyRename').onclick=async()=>{
   await load();notice('Nome modificato su Supabase: '+newTitle);
  }catch(e){notice('Errore modifica: '+e.message)}
 };
-el('familyReload').onclick=()=>load().then(uploadNew).catch(err=>notice(err.message));
+el('familyReload').onclick=()=>syncEdits().then(load).then(uploadNew).catch(err=>notice(err.message));
 el('familyExit').onclick=()=>{localStorage.removeItem(SESSION_KEY);refreshToken=null;token=null;house=null;el('familyForm').hidden=false;el('familySignupBox').hidden=false;el('familyOnline').hidden=true;notice('Disconnessa. I dati già caricati restano in questa copia di prova.')};
 async function restoreSession(){
  const saved=localStorage.getItem(SESSION_KEY);
