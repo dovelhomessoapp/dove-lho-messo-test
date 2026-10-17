@@ -9,6 +9,7 @@ home.append(panel);
 const el=id=>document.getElementById(id);
 let token=null,house=null,sending=false;
 let refreshToken=null;
+const SESSION_KEY='dlm-test-family-refresh-v1';
 const cloudIds=new Set();
 const cloudPlaceIds=new Set();
 const pendingPhotos=new Set();
@@ -61,7 +62,7 @@ el('familyForm').onsubmit=async e=>{
  const d=await r.json();el('familyPass').value='';if(!r.ok)throw Error(d.msg||d.message||'Accesso non riuscito');
  const houses=await get('/rest/v1/homes?select=id,name',d.access_token);
  if(houses.length!==1)throw Error('Questa prova richiede una sola casa');
- token=d.access_token;refreshToken=d.refresh_token;house=houses[0];el('familyHouse').textContent=house.name;
+ token=d.access_token;refreshToken=d.refresh_token;localStorage.setItem(SESSION_KEY,refreshToken);house=houses[0];el('familyHouse').textContent=house.name;
  await load();await uploadNew();el('familyForm').hidden=true;el('familyOnline').hidden=false;
  }catch(err){notice('Errore: '+err.message)}finally{btn.disabled=false}
 };
@@ -153,5 +154,5 @@ el('familyRename').onclick=async()=>{
  }catch(e){notice('Errore modifica: '+e.message)}
 };
 el('familyReload').onclick=()=>load().then(uploadNew).catch(err=>notice(err.message));
-el('familyExit').onclick=()=>{token=null;house=null;el('familyForm').hidden=false;el('familyOnline').hidden=true;notice('Disconnessa. I dati già caricati restano in questa copia di prova.')};
+el('familyExit').onclick=()=>{localStorage.removeItem(SESSION_KEY);refreshToken=null;token=null;house=null;el('familyForm').hidden=false;el('familyOnline').hidden=true;notice('Disconnessa. I dati già caricati restano in questa copia di prova.')};
 })();
