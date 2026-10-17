@@ -93,7 +93,8 @@ async function uploadNew(){
  }catch(e){notice('Sincronizzazione da riprovare: '+e.message)}
  finally{sending=false}
 }
-window.familySyncQueue=()=>{if(token&&house)void uploadNew()};
+window.familySyncQueue=()=>{if(token&&house){if(navigator.onLine)void uploadNew();else notice('Oggetto salvato sul telefono: sarà sincronizzato quando torni online.')}};
+window.addEventListener('online',()=>{if(token&&house)void uploadNew()});
 window.familyUpdateItem=async item=>{
  if(!token||!house||!cloudIds.has(item.id)){notice('Modifica salvata soltanto sul dispositivo di prova.');return}
  if(!navigator.onLine){notice('Offline: modifica locale da riconciliare. Non aggiornare l’inventario.');return}
