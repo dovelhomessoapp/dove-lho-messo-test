@@ -71,7 +71,7 @@ el('familyForm').onsubmit=async e=>{
  const houses=await get('/rest/v1/homes?select=id,name',d.access_token);
  if(houses.length!==1)throw Error('Questa prova richiede una sola casa');
  token=d.access_token;refreshToken=d.refresh_token;localStorage.setItem(SESSION_KEY,refreshToken);house=houses[0];el('familyHouse').textContent=house.name;
- await load();await uploadNew();el('familyForm').hidden=true;el('familyOnline').hidden=false;
+ await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
  }catch(err){notice('Errore: '+err.message)}finally{btn.disabled=false}
 };
 async function uploadNew(){
@@ -162,5 +162,22 @@ el('familyRename').onclick=async()=>{
  }catch(e){notice('Errore modifica: '+e.message)}
 };
 el('familyReload').onclick=()=>load().then(uploadNew).catch(err=>notice(err.message));
-el('familyExit').onclick=()=>{localStorage.removeItem(SESSION_KEY);refreshToken=null;token=null;house=null;el('familyForm').hidden=false;el('familyOnline').hidden=true;notice('Disconnessa. I dati già caricati restano in questa copia di prova.')};
+el('familyExit').onclick=()=>{localStorage.removeItem(SESSION_KEY);refreshToken=null;token=null;house=null;el('familyForm').hidden=false;el('familySignupBox').hidden=false;el('familyOnline').hidden=true;notice('Disconnessa. I dati già caricati restano in questa copia di prova.')};
+async function restoreSession(){
+ const saved=localStorage.getItem(SESSION_KEY);
+ if(!saved)return;
+ refreshToken=saved;
+ try{
+  await renew();
+  const houses=await get('/rest/v1/homes?select=id,name',token);
+  if(houses.length!==1)throw Error('Casa non disponibile');
+  house=houses[0];el('familyHouse').textContent=house.name;
+  await load();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
+  notice('Accesso ripristinato.');
+ }catch(e){
+  localStorage.removeItem(SESSION_KEY);refreshToken=null;token=null;house=null;
+  notice('Effettua nuovamente l’accesso.');
+ }
+}
+void restoreSession();
 })();
