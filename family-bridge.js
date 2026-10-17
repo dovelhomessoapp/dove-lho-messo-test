@@ -18,6 +18,12 @@ async function uploadPhoto(item){
  if(!response.ok)throw Error((await response.json().catch(()=>({}))).message||'Upload non riuscito');
  return path;
 }
+async function signPhoto(path){
+ const response=await fetch(base+'/storage/v1/object/sign/foto-oggetti/'+path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:3600})});
+ const data=await response.json();
+ if(!response.ok||!data.signedURL)throw Error(data.message||'Foto non disponibile');
+ return base+'/storage/v1'+data.signedURL;
+}
 const notice=s=>el('familyMsg').textContent=s;
 async function get(path,t){const r=await fetch(base+path,{headers:{apikey:key,Authorization:'Bearer '+t},cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.message||'Errore di lettura');return d}
 async function load(){
