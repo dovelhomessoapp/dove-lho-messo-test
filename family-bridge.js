@@ -41,6 +41,18 @@ async function load(){
  el('familyCount').textContent='Oggetti online: '+objects.length;
  notice('Inventario familiare aggiornato.');
 }
+el('familySignup').onsubmit=async e=>{
+ e.preventDefault();
+ const btn=e.submitter;btn.disabled=true;
+ try{
+  const response=await fetch(base+'/auth/v1/signup',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email:el('signupEmail').value.trim(),password:el('signupPass').value})});
+  const data=await response.json();
+  el('signupPass').value='';
+  if(!response.ok)throw Error(data.msg||data.message||'Registrazione non riuscita');
+  notice('Richiesta inviata. Controlla la tua email e conferma l’account. Per accedere alla casa serve un invito.');
+ }catch(err){notice('Registrazione: '+err.message)}
+ finally{btn.disabled=false}
+};
 el('familyForm').onsubmit=async e=>{
  e.preventDefault();const btn=e.submitter;btn.disabled=true;
  try{
