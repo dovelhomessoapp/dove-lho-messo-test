@@ -17,6 +17,9 @@ const EDIT_KEY='dlm-test-offline-edits-v1';
 const pendingEdits=new Map(Object.entries(JSON.parse(localStorage.getItem(EDIT_KEY)||'{}')));
 const saveEdits=()=>localStorage.setItem(EDIT_KEY,JSON.stringify(Object.fromEntries(pendingEdits)));
 const deletingIds=new Set();
+const CREATE_KEY='dlm-test-pending-creates-v1';
+const pendingCreates=new Set(JSON.parse(localStorage.getItem(CREATE_KEY)||'[]'));
+const saveCreates=()=>localStorage.setItem(CREATE_KEY,JSON.stringify([...pendingCreates]));
 async function uploadPhoto(item){
  const path=house.id+'/'+item.id+'-'+crypto.randomUUID()+'.jpg';
  const binary=await (await fetch(item.photo)).blob();
@@ -45,9 +48,9 @@ async function load(){
  const places=await get('/rest/v1/locations?select=id,name&home_id=eq.'+house.id,token);
  for(const i of objects){if(i.image_url&&i.image_url.startsWith(house.id+'/')){try{i.image_url=await signPhoto(i.image_url)}catch(e){i.image_url='';notice('Foto non disponibile')}}}
  // Aggiorna solo la copia locale usata dalle schermate dell'app di prova.
- objects.forEach(i=>cloudIds.add(i.id));
+ cloudIds.clear();objects.forEach(i=>{cloudIds.add(i.id);if(pendingCreates.delete(i.id))saveCreates()});
  places.forEach(p=>cloudPlaceIds.add(p.id));
- const pending=db.items.filter(i=>!cloudIds.has(i.id)||pendingPhotos.has(i.id)||pendingEdits.has(i.id));
+ const pending=db.items.filter(i=>pendingCreates.has(i.id)||pendingPhotos.has(i.id)||pendingEdits.has(i.id));
  db.items=[...objects.filter(i=>!pendingPhotos.has(i.id)&&!pendingEdits.has(i.id)).map(i=>({id:i.id,kind:i.kind,name:i.title,author:i.author||'',barcode:i.isbn||'',desc:i.description||'',photo:i.image_url||'',place:i.location_id||'',value:i.estimated_value??'',created:Date.parse(i.created_at)||Date.now()})),...pending];
  db.places=[...places.map(p=>({id:p.id,name:p.name})),...db.places.filter(p=>!places.some(c=>c.id===p.id))];
  localStorage.setItem('dlm-test-v1',JSON.stringify(db));
