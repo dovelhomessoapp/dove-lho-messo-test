@@ -32,6 +32,7 @@ el('familyForm').onsubmit=async e=>{
  await load();el('familyForm').hidden=true;el('familyOnline').hidden=false;
  }catch(err){notice('Errore: '+err.message)}finally{btn.disabled=false}
 };
+window.familySyncQueue=()=>{if(token)notice('Nuova modifica locale: sincronizzazione online non ancora attiva.');};
 el('familyReload').onclick=()=>load().catch(err=>notice(err.message));
 el('familyExit').onclick=()=>{token=null;house=null;el('familyForm').hidden=false;el('familyOnline').hidden=true;notice('Disconnessa. I dati già caricati restano in questa copia di prova.')};
 })();
