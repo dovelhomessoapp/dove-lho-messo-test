@@ -27,6 +27,14 @@ async function signPhoto(path){
  return base+'/storage/v1'+data.signedURL;
 }
 const notice=s=>el('familyMsg').textContent=s;
+async function renew(){
+ if(!refreshToken)throw Error('Sessione scaduta');
+ const r=await fetch(base+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:refreshToken})});
+ const d=await r.json();if(!r.ok)throw Error(d.msg||d.message||'Accesso scaduto');
+ token=d.access_token;refreshToken=d.refresh_token;
+ localStorage.setItem(SESSION_KEY,refreshToken);
+ return token;
+}
 async function get(path,t){const r=await fetch(base+path,{headers:{apikey:key,Authorization:'Bearer '+t},cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.message||'Errore di lettura');return d}
 async function load(){
  const objects=await get('/rest/v1/items?select=id,kind,title,author,isbn,description,image_url,location_id,estimated_value,created_at&home_id=eq.'+house.id,token);
