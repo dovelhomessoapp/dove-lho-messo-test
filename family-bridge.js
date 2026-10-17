@@ -8,6 +8,7 @@ panel.innerHTML='<h3>🏡 Casa di famiglia</h3><form id="familyForm"><label>Emai
 home.append(panel);
 const el=id=>document.getElementById(id);
 let token=null,house=null,sending=false;
+let refreshToken=null;
 const cloudIds=new Set();
 const cloudPlaceIds=new Set();
 const pendingPhotos=new Set();
