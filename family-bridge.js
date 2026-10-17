@@ -99,8 +99,9 @@ async function uploadNew(){
 window.familySyncQueue=()=>{if(token&&house){if(navigator.onLine)void uploadNew();else notice('Oggetto salvato sul telefono: sarà sincronizzato quando torni online.')}};
 window.addEventListener('online',()=>{if(token&&house)void uploadNew()});
 window.familyUpdateItem=async item=>{
+ pendingEdits.set(item.id,{name:item.name,desc:item.desc,place:item.place});saveEdits();
  if(!token||!house||!cloudIds.has(item.id)){notice('Modifica salvata soltanto sul dispositivo di prova.');return}
- if(!navigator.onLine){notice('Offline: modifica locale da riconciliare. Non aggiornare l’inventario.');return}
+ if(!navigator.onLine){notice('Modifica salvata sul telefono: sarà sincronizzata quando torni online.');return}
  try{
   const res=await fetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(item.id)+'&home_id=eq.'+encodeURIComponent(house.id),{
    method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},
@@ -108,6 +109,7 @@ window.familyUpdateItem=async item=>{
   });
   const result=await res.json().catch(()=>null);
   if(!res.ok||!Array.isArray(result)||result.length!==1)throw Error(result?.message||'Conferma server non ricevuta');
+  pendingEdits.delete(item.id);saveEdits();
   if(item.photo&&item.photo.startsWith('data:image/')){
    pendingPhotos.add(item.id);
    try{
