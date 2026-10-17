@@ -7,15 +7,18 @@ const panel=document.createElement('section');panel.className='panel';
 panel.innerHTML='<h3>🏡 Casa di famiglia</h3><form id="familyForm"><label>Email<input type="email" id="familyEmail" required autocomplete="email"></label><label>Password<input type="password" id="familyPass" required autocomplete="current-password"></label><button class="primary">Accedi</button></form><section id="familyOnline" hidden><p id="familyHouse"></p><p id="familyCount"></p><button type="button" class="secondary" id="familyReload">Aggiorna inventario</button><button type="button" class="secondary" id="familyExit">Esci</button></section><p class="hint" id="familyMsg" role="status">Gli oggetti online compariranno nella sezione Oggetti dopo l’accesso.</p>';
 home.append(panel);
 const el=id=>document.getElementById(id);
-let token=null,house=null;
+let token=null,house=null,sending=false;
+const cloudIds=new Set();
 const notice=s=>el('familyMsg').textContent=s;
 async function get(path,t){const r=await fetch(base+path,{headers:{apikey:key,Authorization:'Bearer '+t},cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.message||'Errore di lettura');return d}
 async function load(){
  const objects=await get('/rest/v1/items?select=id,kind,title,author,isbn,description,image_url,location_id,estimated_value,created_at&home_id=eq.'+house.id,token);
  const places=await get('/rest/v1/locations?select=id,name&home_id=eq.'+house.id,token);
  // Aggiorna solo la copia locale usata dalle schermate dell'app di prova.
- db.items=objects.map(i=>({id:i.id,kind:i.kind,name:i.title,author:i.author||'',barcode:i.isbn||'',desc:i.description||'',photo:i.image_url||'',place:i.location_id||'',value:i.estimated_value??'',created:Date.parse(i.created_at)||Date.now()}));
- db.places=places.map(p=>({id:p.id,name:p.name}));
+ objects.forEach(i=>cloudIds.add(i.id));
+ const pending=db.items.filter(i=>!cloudIds.has(i.id));
+ db.items=[...objects.map(i=>({id:i.id,kind:i.kind,name:i.title,author:i.author||'',barcode:i.isbn||'',desc:i.description||'',photo:i.image_url||'',place:i.location_id||'',value:i.estimated_value??'',created:Date.parse(i.created_at)||Date.now()})),...pending];
+ db.places=[...places.map(p=>({id:p.id,name:p.name})),...db.places.filter(p=>!places.some(c=>c.id===p.id))];
  localStorage.setItem('dlm-test-v1',JSON.stringify(db));
  renderStats();renderPlaces();renderItems();
  el('familyCount').textContent='Oggetti online: '+objects.length;
