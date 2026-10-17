@@ -13,6 +13,9 @@ const SESSION_KEY='dlm-test-family-refresh-v1';
 const cloudIds=new Set();
 const cloudPlaceIds=new Set();
 const pendingPhotos=new Set();
+const EDIT_KEY='dlm-test-offline-edits-v1';
+const pendingEdits=new Map(Object.entries(JSON.parse(localStorage.getItem(EDIT_KEY)||'{}')));
+const saveEdits=()=>localStorage.setItem(EDIT_KEY,JSON.stringify(Object.fromEntries(pendingEdits)));
 async function uploadPhoto(item){
  const path=house.id+'/'+item.id+'-'+crypto.randomUUID()+'.jpg';
  const binary=await (await fetch(item.photo)).blob();
