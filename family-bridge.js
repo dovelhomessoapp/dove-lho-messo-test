@@ -35,7 +35,24 @@ el('familyForm').onsubmit=async e=>{
  await load();el('familyForm').hidden=true;el('familyOnline').hidden=false;
  }catch(err){notice('Errore: '+err.message)}finally{btn.disabled=false}
 };
-window.familySyncQueue=()=>{if(token)notice('Nuova modifica locale: sincronizzazione online non ancora attiva.');};
+async function uploadNew(){
+ if(!token||!house||sending||!navigator.onLine)return;
+ sending=true;
+ try{
+  const todo=db.items.filter(i=>i.name&&!cloudIds.has(i.id));
+  for(const i of todo){
+   if(i.photo){notice('Foto non sincronizzate: oggetto mantenuto in locale.');continue}
+   if(i.place&&!cloudIds.has(i.place)){notice('Posizione locale da sincronizzare prima dell’oggetto.');continue}
+   const row={id:i.id,home_id:house.id,title:i.name,kind:i.kind==='book'?'book':'object',author:i.author||null,isbn:i.kind==='book'?i.barcode||null:null,description:i.desc||null,location_id:i.place||null,estimated_value:i.value===''?null:Number(i.value),created_by:null};
+   const res=await fetch(base+'/rest/v1/items?on_conflict=id',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});
+   if(!res.ok){const err=await res.json().catch(()=>({}));throw Error(err.message||'Errore salvataggio')}
+   cloudIds.add(i.id);
+  }
+  await load();
+ }catch(e){notice('Sincronizzazione da riprovare: '+e.message)}
+ finally{sending=false}
+}
+window.familySyncQueue=()=>{if(token&&house)void uploadNew()};
 el('familyReload').onclick=()=>load().catch(err=>notice(err.message));
 el('familyExit').onclick=()=>{token=null;house=null;el('familyForm').hidden=false;el('familyOnline').hidden=true;notice('Disconnessa. I dati già caricati restano in questa copia di prova.')};
 })();
