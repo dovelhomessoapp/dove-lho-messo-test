@@ -53,6 +53,19 @@ async function uploadNew(){
  finally{sending=false}
 }
 window.familySyncQueue=()=>{if(token&&house)void uploadNew()};
+window.familyUpdateItem=async item=>{
+ if(!token||!house||!cloudIds.has(item.id)){notice('Modifica salvata soltanto sul dispositivo di prova.');return}
+ if(!navigator.onLine){notice('Offline: modifica locale da riconciliare. Non aggiornare l’inventario.');return}
+ try{
+  const res=await fetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(item.id)+'&home_id=eq.'+encodeURIComponent(house.id),{
+   method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},
+   body:JSON.stringify({title:item.name,description:item.desc||null})
+  });
+  const result=await res.json().catch(()=>null);
+  if(!res.ok||!Array.isArray(result)||result.length!==1)throw Error(result?.message||'Conferma server non ricevuta');
+  notice('Nome e descrizione aggiornati online.');
+ }catch(err){notice('Modifica salvata solo in locale: '+err.message+'. Non premere Aggiorna inventario.')}
+};
 el('familyRename').onclick=async()=>{
  if(!token||!house)return;
  const row=db.items.find(i=>i.name==='Prova sincronizzazione'&&cloudIds.has(i.id));
