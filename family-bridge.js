@@ -85,14 +85,14 @@ async function uploadNew(){
  if(!token||!house||sending||!navigator.onLine)return;
  sending=true;
  try{
-  const todo=db.items.filter(i=>i.name&&/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(i.id)&&!cloudIds.has(i.id)&&!deletingIds.has(i.id));
+  const todo=db.items.filter(i=>i.name&&/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(i.id)&&pendingCreates.has(i.id)&&!cloudIds.has(i.id)&&!deletingIds.has(i.id));
   for(const i of todo){
    if(i.photo){notice('Foto non sincronizzate: oggetto mantenuto in locale.');continue}
    if(i.place&&!cloudPlaceIds.has(i.place)){notice('Posizione locale da sincronizzare prima dell’oggetto.');continue}
    const row={id:i.id,home_id:house.id,title:i.name,kind:i.kind==='book'?'book':'object',author:i.author||null,isbn:i.kind==='book'?i.barcode||null:null,description:i.desc||null,location_id:i.place||null,estimated_value:i.value===''?null:Number(i.value),created_by:null};
    const res=await fetch(base+'/rest/v1/items?on_conflict=id',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});
    if(!res.ok){const err=await res.json().catch(()=>({}));throw Error(err.message||'Errore salvataggio')}
-   cloudIds.add(i.id);
+   cloudIds.add(i.id);pendingCreates.delete(i.id);saveCreates();
    const confirmed=await get('/rest/v1/items?select=id,location_id&id=eq.'+encodeURIComponent(i.id)+'&home_id=eq.'+encodeURIComponent(house.id),token);
    if(confirmed.length!==1||confirmed[0].location_id!==(i.place||null))throw Error('Posizione non confermata online per '+i.name);
   }
@@ -111,7 +111,7 @@ async function syncEdits(){
   }catch(e){notice('Modifica in attesa: '+e.message);break}
  }
 }
-window.familySyncQueue=()=>{if(token&&house){if(navigator.onLine)void syncEdits().then(uploadNew);else notice('Oggetto salvato sul telefono: sarà sincronizzato quando torni online.')}};
+window.familySyncQueue=()=>{for(const i of db.items){if(i.name&&!cloudIds.has(i.id)&&!pendingCreates.has(i.id)&&!deletingIds.has(i.id)){pendingCreates.add(i.id);saveCreates()}}if(token&&house){if(navigator.onLine)void syncEdits().then(uploadNew);else notice('Oggetto salvato sul telefono: sarà sincronizzato quando torni online.')}};
 window.addEventListener('online',()=>{if(token&&house){void syncEdits().then(uploadNew)}});
 window.familyUpdateItem=async item=>{
  pendingEdits.set(item.id,{name:item.name,desc:item.desc,place:item.place});saveEdits();
