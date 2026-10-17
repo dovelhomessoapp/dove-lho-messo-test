@@ -61,7 +61,7 @@ el('familyForm').onsubmit=async e=>{
  const d=await r.json();el('familyPass').value='';if(!r.ok)throw Error(d.msg||d.message||'Accesso non riuscito');
  const houses=await get('/rest/v1/homes?select=id,name',d.access_token);
  if(houses.length!==1)throw Error('Questa prova richiede una sola casa');
- token=d.access_token;house=houses[0];el('familyHouse').textContent=house.name;
+ token=d.access_token;refreshToken=d.refresh_token;house=houses[0];el('familyHouse').textContent=house.name;
  await load();await uploadNew();el('familyForm').hidden=true;el('familyOnline').hidden=false;
  }catch(err){notice('Errore: '+err.message)}finally{btn.disabled=false}
 };
