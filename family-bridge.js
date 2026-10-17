@@ -1,4 +1,4 @@
-/* Versione famiglia in prova: autenticazione e sola lettura online. */
+/* Versione famiglia in prova: sincronizzazione controllata. */
 (()=>{
 const base='https://ephdnunjudbwlgbxdadm.supabase.co';
 const key='sb_publishable_3kcIRxESMdgXMEwvFs3_0A_0JZkJqZT';
