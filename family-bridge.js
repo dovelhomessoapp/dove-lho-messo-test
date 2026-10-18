@@ -101,7 +101,7 @@ el('familyForm').onsubmit=async e=>{
  const houses=await get('/rest/v1/homes?select=id,name',d.access_token);
  if(houses.length!==1)throw Error('Questa prova richiede una sola casa');
  token=d.access_token;refreshToken=d.refresh_token;localStorage.setItem(SESSION_KEY,refreshToken);house=houses[0];el('familyHouse').textContent=house.name;
- await syncEdits();await syncEdits();await syncEdits();await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
+ await load();await syncEdits();await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
  }catch(err){notice('Errore: '+err.message)}finally{btn.disabled=false}
 };
 async function uploadNew(){
@@ -128,7 +128,7 @@ async function syncEdits(){
  if(!token||!house||!navigator.onLine)return;
  for(const [id,edit] of pendingEdits){
   try{
-   const r=await familyFetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(id)+'&home_id=eq.'+encodeURIComponent(house.id),{method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({title:edit.name,description:edit.desc||null,location_id:edit.place&&cloudPlaceIds.has(edit.place)?edit.place:null})});
+   const r=await familyFetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(id)+'&home_id=eq.'+encodeURIComponent(house.id),{method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({title:edit.name,description:edit.desc||null,location_id:edit.place||null})});
    const rows=await r.json();
    if(!r.ok||!Array.isArray(rows)||rows.length!==1)throw Error(rows?.message||'Aggiornamento non confermato');
    pendingEdits.delete(id);saveEdits();notice('Modifica offline sincronizzata.');
@@ -222,7 +222,7 @@ async function restoreSession(){
   const houses=await get('/rest/v1/homes?select=id,name',token);
   if(houses.length!==1)throw Error('Casa non disponibile');
   house=houses[0];el('familyHouse').textContent=house.name;
-  await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
+  await load();await syncEdits();await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
   notice('Accesso ripristinato.');
  }catch(e){
   localStorage.removeItem(SESSION_KEY);refreshToken=null;token=null;house=null;
