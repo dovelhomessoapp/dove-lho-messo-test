@@ -25,12 +25,12 @@ const saveSeen=()=>localStorage.setItem('dlm-test-seen-v1',JSON.stringify([...se
 async function uploadPhoto(item){
  const path=house.id+'/'+item.id+'-'+crypto.randomUUID()+'.jpg';
  const binary=await (await fetch(item.photo)).blob();
- const response=await fetch(base+'/storage/v1/object/foto-oggetti/'+path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'image/jpeg'},body:binary});
+ const response=await familyFetch(base+'/storage/v1/object/foto-oggetti/'+path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'image/jpeg'},body:binary});
  if(!response.ok)throw Error((await response.json().catch(()=>({}))).message||'Upload non riuscito');
  return path;
 }
 async function signPhoto(path){
- const response=await fetch(base+'/storage/v1/object/sign/foto-oggetti/'+path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:3600})});
+ const response=await familyFetch(base+'/storage/v1/object/sign/foto-oggetti/'+path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:3600})});
  const data=await response.json();
  if(!response.ok||!data.signedURL)throw Error(data.message||'Foto non disponibile');
  return base+'/storage/v1'+data.signedURL;
@@ -44,7 +44,28 @@ async function renew(){
  localStorage.setItem(SESSION_KEY,refreshToken);
  return token;
 }
-async function get(path,t){const active=t===token;if(active&&refreshToken)await renew();const r=await fetch(base+path,{headers:{apikey:key,Authorization:'Bearer '+(active?token:t)},cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.message||'Errore di lettura');return d}
+let renewalPromise=null;
+function needsRenewal(){
+ try{const p=JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/')));return Date.now()>=(p.exp-90)*1000}catch{return true}
+}
+async function refreshOnce(){
+ if(!renewalPromise)renewalPromise=renew().finally(()=>{renewalPromise=null});
+ return renewalPromise;
+}
+async function familyFetch(url,options={}){
+ const isFamily=!!token&&!!refreshToken;
+ if(isFamily&&needsRenewal())await refreshOnce();
+ const headers={...options.headers};
+ if(isFamily)headers.Authorization='Bearer '+token;
+ let response=await fetch(url,{...options,headers});
+ if(response.status===401&&isFamily){
+  await refreshOnce();
+  headers.Authorization='Bearer '+token;
+  response=await fetch(url,{...options,headers});
+ }
+ return response;
+}
+async function get(path,t){const r=await familyFetch(base+path,{headers:{apikey:key,Authorization:'Bearer '+t},cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.message||'Errore di lettura');return d}
 async function load(){
  const objects=await get('/rest/v1/items?select=id,kind,title,author,isbn,description,image_url,location_id,estimated_value,created_at&home_id=eq.'+house.id,token);
  const places=await get('/rest/v1/locations?select=id,name&home_id=eq.'+house.id,token);
@@ -93,7 +114,7 @@ async function uploadNew(){
    if(i.photo){try{imagePath=await uploadPhoto(i)}catch(e){notice('Foto ancora sul telefono: '+e.message);continue}}
    if(i.place&&!cloudPlaceIds.has(i.place)){notice('Posizione locale da sincronizzare prima dell’oggetto.');continue}
    const row={id:i.id,home_id:house.id,title:i.name,kind:i.kind==='book'?'book':'object',author:i.author||null,isbn:i.kind==='book'?i.barcode||null:null,description:i.desc||null,location_id:i.place||null,estimated_value:i.value===''?null:Number(i.value),created_by:null,image_url:imagePath};
-   const res=await fetch(base+'/rest/v1/items?on_conflict=id',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});
+   const res=await familyFetch(base+'/rest/v1/items?on_conflict=id',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(row)});
    if(!res.ok){const err=await res.json().catch(()=>({}));throw Error(err.message||'Errore salvataggio')}
    cloudIds.add(i.id);seenIds.add(i.id);saveSeen();pendingCreates.delete(i.id);saveCreates();
    const confirmed=await get('/rest/v1/items?select=id,location_id&id=eq.'+encodeURIComponent(i.id)+'&home_id=eq.'+encodeURIComponent(house.id),token);
@@ -107,7 +128,7 @@ async function syncEdits(){
  if(!token||!house||!navigator.onLine)return;
  for(const [id,edit] of pendingEdits){
   try{
-   const r=await fetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(id)+'&home_id=eq.'+encodeURIComponent(house.id),{method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({title:edit.name,description:edit.desc||null,location_id:edit.place&&cloudPlaceIds.has(edit.place)?edit.place:null})});
+   const r=await familyFetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(id)+'&home_id=eq.'+encodeURIComponent(house.id),{method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({title:edit.name,description:edit.desc||null,location_id:edit.place&&cloudPlaceIds.has(edit.place)?edit.place:null})});
    const rows=await r.json();
    if(!r.ok||!Array.isArray(rows)||rows.length!==1)throw Error(rows?.message||'Aggiornamento non confermato');
    pendingEdits.delete(id);saveEdits();notice('Modifica offline sincronizzata.');
@@ -121,7 +142,7 @@ window.familyUpdateItem=async item=>{
  if(!token||!house||!cloudIds.has(item.id)){notice('Modifica salvata soltanto sul dispositivo di prova.');return}
  if(!navigator.onLine){notice('Modifica salvata sul telefono: sarà sincronizzata quando torni online.');return}
  try{
-  const res=await fetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(item.id)+'&home_id=eq.'+encodeURIComponent(house.id),{
+  const res=await familyFetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(item.id)+'&home_id=eq.'+encodeURIComponent(house.id),{
    method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},
    body:JSON.stringify({title:item.name,description:item.desc||null,location_id:item.place&&cloudPlaceIds.has(item.place)?item.place:null})
   });
@@ -132,7 +153,7 @@ window.familyUpdateItem=async item=>{
    pendingPhotos.add(item.id);
    try{
     const path=await uploadPhoto(item);
-    const p=await fetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(item.id)+'&home_id=eq.'+encodeURIComponent(house.id),{method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({image_url:path})});
+    const p=await familyFetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(item.id)+'&home_id=eq.'+encodeURIComponent(house.id),{method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},body:JSON.stringify({image_url:path})});
     const a=await p.json().catch(()=>null);
     if(!p.ok||!Array.isArray(a)||a.length!==1)throw Error(a?.message||'Associazione foto non confermata');
     pendingPhotos.delete(item.id);
@@ -146,7 +167,7 @@ window.familyUpdateItem=async item=>{
 window.familyCreatePlace=async place=>{
  if(!token||!house){notice('Posizione salvata solo in locale: accedi a Casa di famiglia.');return}
  try{
-  const result=await fetch(base+'/rest/v1/locations?on_conflict=id',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify({id:place.id,home_id:house.id,name:place.name})});
+  const result=await familyFetch(base+'/rest/v1/locations?on_conflict=id',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify({id:place.id,home_id:house.id,name:place.name})});
   const rows=await result.json().catch(()=>null);
   if(!result.ok||!Array.isArray(rows)||rows.length!==1)throw Error(rows?.message||'Salvataggio non confermato');
   cloudPlaceIds.add(place.id);
@@ -159,7 +180,7 @@ window.familyDeleteItem=async id=>{
  if(!navigator.onLine){notice('Offline: eliminazione annullata.');return false}
  deletingIds.add(id);
  try{
-  const response=await fetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(id)+'&home_id=eq.'+encodeURIComponent(house.id),{
+  const response=await familyFetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(id)+'&home_id=eq.'+encodeURIComponent(house.id),{
    method:'DELETE',headers:{apikey:key,Authorization:'Bearer '+token,Prefer:'return=representation'}
   });
   const rows=await response.json().catch(()=>null);
@@ -180,7 +201,7 @@ el('familyRename').onclick=async()=>{
  const newTitle='Prova sincronizzazione modificata';
  if(!confirm('Rinominare “Prova sincronizzazione” in “'+newTitle+'” sul database familiare?'))return;
  try{
-  const res=await fetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(row.id)+'&home_id=eq.'+encodeURIComponent(house.id),{
+  const res=await familyFetch(base+'/rest/v1/items?id=eq.'+encodeURIComponent(row.id)+'&home_id=eq.'+encodeURIComponent(house.id),{
     method:'PATCH',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'return=representation'},
     body:JSON.stringify({title:newTitle})
   });
