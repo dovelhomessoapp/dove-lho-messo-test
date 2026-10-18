@@ -44,7 +44,7 @@ async function renew(){
  localStorage.setItem(SESSION_KEY,refreshToken);
  return token;
 }
-async function get(path,t){if(token&&refreshToken&&t===token)await renew();const r=await fetch(base+path,{headers:{apikey:key,Authorization:'Bearer '+(t===token?token:t)},cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.message||'Errore di lettura');return d}
+async function get(path,t){const active=t===token;if(active&&refreshToken)await renew();const r=await fetch(base+path,{headers:{apikey:key,Authorization:'Bearer '+(active?token:t)},cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.message||'Errore di lettura');return d}
 async function load(){
  const objects=await get('/rest/v1/items?select=id,kind,title,author,isbn,description,image_url,location_id,estimated_value,created_at&home_id=eq.'+house.id,token);
  const places=await get('/rest/v1/locations?select=id,name&home_id=eq.'+house.id,token);
