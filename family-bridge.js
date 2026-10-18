@@ -35,6 +35,33 @@ async function signPhoto(path){
  if(!response.ok||!data.signedURL)throw Error(data.message||'Foto non disponibile');
  return base+'/storage/v1'+data.signedURL;
 }
+const PHOTO_CACHE='dlm-test-photo-cache-v33';
+async function cacheFamilyPhoto(id,url){
+ if(!('caches' in window)||!url||!url.startsWith('https://'))return;
+ try{
+  const response=await fetch(url);
+  if(!response.ok)return;
+  const cache=await caches.open(PHOTO_CACHE);
+  await cache.put('offline-photo-'+id,response);
+ }catch(e){}
+}
+async function restoreFamilyPhotos(){
+ if(!('caches' in window))return;
+ try{
+  const cache=await caches.open(PHOTO_CACHE);
+  for(const item of db.items){
+   if(!item.photo||!item.photo.startsWith('https://'))continue;
+   const hit=await cache.match('offline-photo-'+item.id);
+   if(!hit)continue;
+   const blob=await hit.blob();
+   const reader=new FileReader();
+   const data=await new Promise((resolve,reject)=>{reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});
+   item.photo=data;
+  }
+  renderItems();
+ }catch(e){}
+}
+void restoreFamilyPhotos();
 const notice=s=>el('familyMsg').textContent=s;
 async function renew(){
  if(!refreshToken)throw Error('Sessione scaduta');
@@ -78,6 +105,8 @@ async function load(){
  db.places=[...places.map(p=>({id:p.id,name:p.name})),...db.places.filter(p=>!places.some(c=>c.id===p.id))];
  localStorage.setItem('dlm-test-v1',JSON.stringify(db));
  renderStats();renderPlaces();renderItems();
+ for(const item of db.items)if(item.photo&&item.photo.startsWith('https://'))void cacheFamilyPhoto(item.id,item.photo);
+ void restoreFamilyPhotos();
  el('familyCount').textContent='Oggetti online: '+objects.length;
  notice('Inventario familiare aggiornato.');
 }
