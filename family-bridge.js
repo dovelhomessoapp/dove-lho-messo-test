@@ -93,6 +93,37 @@ async function familyFetch(url,options={}){
  return response;
 }
 async function get(path,t){const r=await familyFetch(base+path,{headers:{apikey:key,Authorization:'Bearer '+t},cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.message||'Errore di lettura');return d}
+const PLACE_PHOTOS_KEY='dlm-test-location-photos-v37';
+function localPlacePhotos(){try{return JSON.parse(localStorage.getItem(PLACE_PHOTOS_KEY)||'{}')}catch{return {}}}
+async function syncPlacePhotos(){
+ if(!token||!house||!navigator.onLine)return;
+ const photos=localPlacePhotos();
+ for(const place of db.places){
+  if(!cloudPlaceIds.has(place.id))continue;
+  const path=house.id+'/location-'+place.id+'.jpg';
+  if(photos[place.id]?.startsWith('data:image/')){
+   try{
+    const binary=await(await fetch(photos[place.id])).blob();
+    const result=await familyFetch(base+'/storage/v1/object/foto-oggetti/'+path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'image/jpeg','x-upsert':'true'},body:binary});
+    if(!result.ok)throw Error((await result.json().catch(()=>({}))).message||'Caricamento foto fallito');
+    delete photos[place.id];
+    localStorage.setItem(PLACE_PHOTOS_KEY,JSON.stringify(photos));
+   }catch(err){notice('Foto posizione conservata sul telefono: '+err.message);continue}
+  }
+  if(!photos[place.id]){
+   try{
+    const signed=await signPhoto(path);
+    const response=await fetch(signed);
+    if(!response.ok)continue;
+    const blob=await response.blob();
+    const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});
+    photos[place.id]=data;
+    localStorage.setItem(PLACE_PHOTOS_KEY,JSON.stringify(photos));
+   }catch(err){}
+  }
+ }
+ renderPlaces();
+}
 async function load(){
  const objects=await get('/rest/v1/items?select=id,kind,title,author,isbn,description,image_url,location_id,estimated_value,created_at&home_id=eq.'+house.id,token);
  const places=await get('/rest/v1/locations?select=id,name&home_id=eq.'+house.id,token);
@@ -107,6 +138,7 @@ async function load(){
  renderStats();renderPlaces();renderItems();
  for(const item of db.items)if(item.photo&&item.photo.startsWith('https://'))void cacheFamilyPhoto(item.id,item.photo);
  void restoreFamilyPhotos();
+ await syncPlacePhotos();
  el('familyCount').textContent='Oggetti online: '+objects.length;
  notice('Inventario familiare aggiornato.');
 }
