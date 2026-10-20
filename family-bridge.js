@@ -98,16 +98,17 @@ function localPlacePhotos(){try{return JSON.parse(localStorage.getItem(PLACE_PHO
 async function syncPlacePhotos(){
  if(!token||!house||!navigator.onLine)return;
  const photos=localPlacePhotos();
+ let synced={};try{synced=JSON.parse(localStorage.getItem('dlm-test-location-synced-v38')||'{}')}catch{}
  for(const place of db.places){
   if(!cloudPlaceIds.has(place.id))continue;
   const path=house.id+'/location-'+place.id+'.jpg';
-  if(photos[place.id]?.startsWith('data:image/')){
+  if(photos[place.id]?.startsWith('data:image/')&&synced[place.id]!==photos[place.id].length+':'+photos[place.id].slice(-60)){
    try{
     const binary=await(await fetch(photos[place.id])).blob();
     const result=await familyFetch(base+'/storage/v1/object/foto-oggetti/'+path,{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'image/jpeg','x-upsert':'true'},body:binary});
     if(!result.ok)throw Error((await result.json().catch(()=>({}))).message||'Caricamento foto fallito');
-    delete photos[place.id];
-    localStorage.setItem(PLACE_PHOTOS_KEY,JSON.stringify(photos));
+    synced[place.id]=photos[place.id].length+':'+photos[place.id].slice(-60);
+    localStorage.setItem('dlm-test-location-synced-v38',JSON.stringify(synced));
    }catch(err){notice('Foto posizione conservata sul telefono: '+err.message);continue}
   }
   if(!photos[place.id]){
@@ -119,6 +120,8 @@ async function syncPlacePhotos(){
     const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});
     photos[place.id]=data;
     localStorage.setItem(PLACE_PHOTOS_KEY,JSON.stringify(photos));
+    synced[place.id]=data.length+':'+data.slice(-60);
+    localStorage.setItem('dlm-test-location-synced-v38',JSON.stringify(synced));
    }catch(err){}
   }
  }
