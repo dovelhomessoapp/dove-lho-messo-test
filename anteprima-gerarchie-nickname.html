@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Anteprima — Casa dolce casa</title>
+<style>
+:root{font-family:ui-rounded,"Trebuchet MS",system-ui,sans-serif;color:#4d2b69;background:#f8f2ff}*{box-sizing:border-box}body{margin:0;padding:18px}main{max-width:560px;margin:auto}h1{font-size:1.65rem;margin:10px 0}h2{font-size:1.12rem}.muted{color:#76678b;font-size:.92rem}.card{background:#fff;border:1px solid #eedbf8;border-radius:20px;padding:18px;margin:14px 0;box-shadow:0 3px 15px #54256c0b}label{display:block;margin:12px 0 5px;font-weight:700}input,select{font:inherit;width:100%;padding:13px;border:1px solid #d7bde7;border-radius:12px;background:white;color:#4d2b69}button{font:inherit;border:0;border-radius:12px;padding:12px 17px;background:#8053b1;color:white;font-weight:bold;cursor:pointer}button.secondary{background:#efe3f9;color:#4d2b69}button:disabled{opacity:.6}.row{display:flex;gap:9px;flex-wrap:wrap}.row>*{flex:1}ol{padding-left:20px}li{padding:7px 0}.tag{display:inline-block;padding:5px 9px;background:#eee0fa;border-radius:10px;margin:2px}.warning{background:#fff9e9;border:1px solid #eed79d;border-radius:12px;padding:12px;font-size:.88rem}.item{background:#fbf7ff;padding:12px;border-radius:13px;margin:8px 0}small{color:#76678b}
+</style></head><body><main>
+<h1>🏡 Casa dolce casa</h1><p class="muted">Anteprima interattiva delle prossime funzioni</p>
+<p class="warning">Questa è una dimostrazione: i dati rimangono solo in questa pagina finché è aperta. Non modifica Supabase e non contiene i vostri oggetti reali.</p>
+<section class="card"><h2>💜 Il tuo nickname</h2><label for="nick">Come vuoi essere chiamata?</label><input id="nick" maxlength="40" value="Noemi" placeholder="Es. Mamma, Chantal, Noemi"><p class="muted">Nella versione completa il nickname sarà legato al tuo account, non all'indirizzo email.</p><button id="saveNick">Conferma nickname</button><p id="nickResult" role="status"></p></section>
+<section class="card"><h2>📍 Nuova posizione</h2><label for="parent">Dentro quale posizione?</label><select id="parent"><option value="">🏡 Livello principale (es. una stanza)</option></select><label for="placeName">Nome della nuova posizione</label><input id="placeName" maxlength="80" placeholder="Es. Armadio, Ripiano 2, Scatola rossa"><button id="addPlace" style="margin-top:12px">＋ Aggiungi posizione</button><h2>Le tue posizioni</h2><div id="tree"></div></section>
+<section class="card"><h2>📦 Anteprima scheda oggetto</h2><label for="objectName">Nome oggetto</label><input id="objectName" value="Decorazioni di Natale"><label for="objectPlace">Si trova in</label><select id="objectPlace"></select><button id="addObject" style="margin-top:12px">＋ Inserisci oggetto</button><div id="objects"></div></section>
+</main><script>
+(()=>{"use strict";
+const $=id=>document.getElementById(id);
+const seed=[{id:"p1",name:"Cantina",parent:null},{id:"p2",name:"Scaffale 2",parent:"p1"},{id:"p3",name:"Scatola rossa",parent:"p2"}];const places=[...seed];const objects=[];let nickname="Noemi";
+const esc=x=>String(x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const byId=id=>places.find(p=>p.id===id);
+const path=id=>{const a=[],seen=new Set();while(id&&byId(id)&&!seen.has(id)){seen.add(id);let p=byId(id);a.unshift(p.name);id=p.parent}return a.join(" → ")};
+function draw(){
+const options=places.map(p=>'<option value="'+esc(p.id)+'">'+esc(path(p.id))+'</option>').join("");
+const oldParent=$("parent").value,oldObject=$("objectPlace").value;
+$("parent").innerHTML='<option value="">🏡 Livello principale (es. una stanza)</option>'+options;
+$("objectPlace").innerHTML='<option value="">Da assegnare</option>'+options;
+$("parent").value=byId(oldParent)?oldParent:"";$("objectPlace").value=byId(oldObject)?oldObject:"p3";
+function branch(parent){let ps=places.filter(p=>p.parent===parent);return ps.length?"<ol>"+ps.map(p=>"<li><strong>"+esc(p.name)+"</strong>"+(places.some(q=>q.parent===p.id)?branch(p.id):"")+"</li>").join("")+"</ol>":""}
+$("tree").innerHTML=branch(null);
+$("objects").innerHTML=objects.map(o=>'<div class="item"><strong>📦 '+esc(o.name)+'</strong><p>📍 '+esc(path(o.place)||"Da assegnare")+'</p><small>Inserito da: '+esc(o.createdBy)+'</small></div>').join("");
+}
+$("saveNick").onclick=()=>{const v=$("nick").value.trim();if(!v){$("nickResult").textContent="Inserisci un nickname.";return}nickname=v;$("nickResult").textContent="💜 Nickname impostato: "+v};
+$("addPlace").onclick=()=>{const name=$("placeName").value.trim();if(!name)return alert("Scrivi il nome della posizione");const p={id:"p"+crypto.randomUUID(),name,parent:$("parent").value||null};places.push(p);$("placeName").value="";draw();$("parent").value=p.id};
+$("addObject").onclick=()=>{const name=$("objectName").value.trim();if(!name)return alert("Scrivi il nome dell'oggetto");objects.push({name,place:$("objectPlace").value,createdBy:nickname});draw()};
+draw();
+})();
+</script></body></html>
