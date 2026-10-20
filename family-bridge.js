@@ -4,7 +4,7 @@ const base='https://ephdnunjudbwlgbxdadm.supabase.co';
 const key='sb_publishable_3kcIRxESMdgXMEwvFs3_0A_0JZkJqZT';
 const home=document.getElementById('home');
 const panel=document.createElement('section');panel.className='panel';
-panel.innerHTML='<h3>🏡 Casa di famiglia</h3><form id="familyForm"><label>Email<input type="email" id="familyEmail" required autocomplete="email"></label><label>Password<input type="password" id="familyPass" required autocomplete="current-password"></label><button class="primary">Accedi</button></form><details id="familySignupBox"><summary>Crea un accesso personale</summary><form id="familySignup"><label>Email personale<input id="signupEmail" type="email" autocomplete="email" required></label><label>Nuova password<input id="signupPass" type="password" autocomplete="new-password" minlength="8" required></label><button type="submit" class="secondary">Crea account</button></form><p class="hint">Per entrare nella Casa di famiglia servirà anche un invito del proprietario.</p></details><section id="familyOnline" hidden><p id="familyHouse"></p><p id="familyCount"></p><button type="button" class="secondary" id="familyReload">Aggiorna inventario</button><button type="button" class="secondary" id="familyRename">Rinomina oggetto di prova</button><button type="button" class="secondary" id="familyExit">Esci</button></section><p class="hint" id="familyMsg" role="status">Gli oggetti online compariranno nella sezione Oggetti dopo l’accesso.</p>';
+panel.innerHTML='<h3>🏡 Casa dolce casa</h3><form id="familyForm"><label>Email<input type="email" id="familyEmail" required autocomplete="email"></label><label>Password<input type="password" id="familyPass" required autocomplete="current-password"></label><button class="primary">Accedi</button></form><details id="familySignupBox"><summary>Crea un accesso personale</summary><form id="familySignup"><label>Email personale<input id="signupEmail" type="email" autocomplete="email" required></label><label>Nuova password<input id="signupPass" type="password" autocomplete="new-password" minlength="8" required></label><button type="submit" class="secondary">Crea account</button></form><p class="hint">Per entrare nella Casa dolce casa servirà anche un invito del proprietario.</p></details><section id="familyOnline" hidden><p id="familyHouse"></p><p id="familyCount"></p><button type="button" class="secondary" id="familyReload">Aggiorna inventario</button><button type="button" class="secondary" id="familyRename">Rinomina oggetto di prova</button><button type="button" class="secondary" id="familyExit">Esci</button></section><p class="hint" id="familyMsg" role="status">Gli oggetti online compariranno nella sezione Oggetti dopo l’accesso.</p>';
 home.append(panel);
 const el=id=>document.getElementById(id);
 let token=null,house=null,sending=false;
@@ -164,7 +164,7 @@ el('familyForm').onsubmit=async e=>{
  const d=await r.json();el('familyPass').value='';if(!r.ok)throw Error(d.msg||d.message||'Accesso non riuscito');
  const houses=await get('/rest/v1/homes?select=id,name',d.access_token);
  if(houses.length!==1)throw Error('Questa prova richiede una sola casa');
- token=d.access_token;refreshToken=d.refresh_token;localStorage.setItem(SESSION_KEY,refreshToken);house=houses[0];el('familyHouse').textContent=house.name;
+ token=d.access_token;refreshToken=d.refresh_token;localStorage.setItem(SESSION_KEY,refreshToken);house=houses[0];el('familyHouse').textContent='🏡 Casa dolce casa';
  await load();await syncEdits();await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
  }catch(err){notice('Errore: '+err.message)}finally{btn.disabled=false}
 };
@@ -229,17 +229,17 @@ window.familyUpdateItem=async item=>{
  }catch(err){notice('Modifica salvata solo in locale: '+err.message+'. Non premere Aggiorna inventario.')}
 };
 window.familyCreatePlace=async place=>{
- if(!token||!house){notice('Posizione salvata solo in locale: accedi a Casa di famiglia.');return}
+ if(!token||!house){notice('Posizione salvata solo in locale: accedi a Casa dolce casa.');return}
  try{
   const result=await familyFetch(base+'/rest/v1/locations?on_conflict=id',{method:'POST',headers:{apikey:key,Authorization:'Bearer '+token,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=representation'},body:JSON.stringify({id:place.id,home_id:house.id,name:place.name})});
   const rows=await result.json().catch(()=>null);
   if(!result.ok||!Array.isArray(rows)||rows.length!==1)throw Error(rows?.message||'Salvataggio non confermato');
   cloudPlaceIds.add(place.id);
-  notice('Posizione salvata su Casa di famiglia.');
+  notice('Posizione salvata su Casa dolce casa.');
  }catch(err){notice('Posizione soltanto in locale: '+err.message)}
 };
 window.familyDeleteItem=async id=>{
- if(!token||!house){notice('Accedi a Casa di famiglia prima di eliminare.');return false}
+ if(!token||!house){notice('Accedi a Casa dolce casa prima di eliminare.');return false}
  if(!cloudIds.has(id)){notice('Oggetto non ancora sincronizzato: eliminazione online non necessaria.');return true}
  if(!navigator.onLine){notice('Offline: eliminazione annullata.');return false}
  deletingIds.add(id);
