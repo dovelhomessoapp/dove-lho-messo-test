@@ -246,6 +246,7 @@ async function restoreSession(){
  const saved=localStorage.getItem(SESSION_KEY);
  if(!saved)return;
  refreshToken=saved;
+ if(!navigator.onLine){notice('Sei offline: puoi consultare gli oggetti già salvati. L’accesso familiare riprenderà quando torna Internet.');return}
  try{
   await renew();
   const houses=await get('/rest/v1/homes?select=id,name',token);
@@ -254,9 +255,11 @@ async function restoreSession(){
   await load();await syncEdits();await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
   notice('Accesso ripristinato.');
  }catch(e){
+  if(!navigator.onLine||e instanceof TypeError){notice('Connessione non disponibile: gli oggetti salvati restano consultabili. Riprova quando torni online.');return}
   localStorage.removeItem(SESSION_KEY);refreshToken=null;token=null;house=null;
   notice('Effettua nuovamente l’accesso.');
  }
 }
+window.addEventListener('online',()=>{if(!token&&refreshToken)void restoreSession()});
 void restoreSession();
 })();
