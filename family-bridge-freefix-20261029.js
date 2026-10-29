@@ -121,6 +121,30 @@ async function loadPremiumStatus(){
   window.dlmRefreshLimits?.();
   if(FORCE_FREE_TEST){
    statusEl.textContent='🧪 Piano GRATUITO simulato · '+db.items.length+'/30 elementi · Premium reale non modificato';
+   let toolsBox=el('familyFreeTestTools');
+   if(!toolsBox){
+    toolsBox=document.createElement('div');
+    toolsBox.id='familyFreeTestTools';
+    toolsBox.style.margin='12px 0';
+    toolsBox.innerHTML='<p class="hint"><strong>🧪 Test rapido limite gratuito</strong></p><div class="row"><button type="button" class="secondary" id="familySeed30">Crea 30 elementi test</button><button type="button" class="secondary" id="familyClear30">Rimuovi elementi test</button></div>';
+    statusEl.insertAdjacentElement('afterend',toolsBox);
+    el('familySeed30').onclick=()=>{
+      const existing=db.items.filter(x=>x.testSeed===true).length;
+      const toAdd=Math.max(0,30-db.items.length);
+      for(let n=0;n<toAdd;n++)db.items.push({id:crypto.randomUUID(),kind:'object',name:'Elemento test '+String(existing+n+1).padStart(2,'0'),author:'',barcode:'',desc:'Creato automaticamente per test limite piano gratuito',place:'',value:'',photo:'',created:Date.now()+n,testSeed:true});
+      localStorage.setItem('dlm-test-v1',JSON.stringify(db));
+      window.dlmRefreshLimits?.();
+      statusEl.textContent='🧪 Piano GRATUITO simulato · '+db.items.length+'/30 elementi · Premium reale non modificato';
+      notice(toAdd?'Creati '+toAdd+' elementi test. Ora prova ad aggiungerne un altro.':'Sei già a 30/30 elementi.');
+    };
+    el('familyClear30').onclick=()=>{
+      db.items=db.items.filter(x=>x.testSeed!==true);
+      localStorage.setItem('dlm-test-v1',JSON.stringify(db));
+      window.dlmRefreshLimits?.();
+      statusEl.textContent='🧪 Piano GRATUITO simulato · '+db.items.length+'/30 elementi · Premium reale non modificato';
+      notice('Elementi test rimossi.');
+    };
+   }
    button.disabled=true;
    button.textContent='🧪 Premium ignorato solo per questo test';
   }else if(enabled){
