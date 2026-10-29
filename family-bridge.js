@@ -165,7 +165,7 @@ el('familyForm').onsubmit=async e=>{
  const houses=await get('/rest/v1/homes?select=id',d.access_token);
  if(houses.length!==1)throw Error('Questa prova richiede una sola casa');
  token=d.access_token;refreshToken=d.refresh_token;localStorage.setItem(SESSION_KEY,refreshToken);house=houses[0];el('familyHouse').textContent='🏡 Casa dolce casa';
- await load();await syncEdits();await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
+ el('familyCount').textContent='Modalità test pagamenti: inventario non richiesto.';el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
  }catch(err){notice('Errore: '+err.message)}finally{btn.disabled=false}
 };
 async function uploadNew(){
@@ -304,7 +304,7 @@ async function restoreSession(){
   const houses=await get('/rest/v1/homes?select=id',token);
   if(houses.length!==1)throw Error('Casa non disponibile');
   house=houses[0];el('familyHouse').textContent='🏡 Casa dolce casa';
-  await load();await syncEdits();await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
+  el('familyCount').textContent='Modalità test pagamenti: inventario non richiesto.';el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
   notice('Accesso ripristinato.');
  }catch(e){
   if(!navigator.onLine||e instanceof TypeError){notice('Connessione non disponibile: gli oggetti salvati restano consultabili. Riprova quando torni online.');return}
