@@ -4,7 +4,7 @@ const base='https://akuonoghksfjsrwhaxhs.supabase.co';
 const key='sb_publishable_c_31PwX0vyR4Ym8AEg5U6g_NlBDhE82';
 const home=document.getElementById('home');
 const panel=document.createElement('section');panel.className='panel';
-panel.innerHTML='<h3>🏡 Casa dolce casa</h3><form id="familyForm"><label>Email<input type="email" id="familyEmail" required autocomplete="email"></label><label>Password<input type="password" id="familyPass" required autocomplete="current-password"></label><button class="primary">Accedi</button></form><details id="familySignupBox"><summary>Crea un accesso personale</summary><form id="familySignup"><label>Email personale<input id="signupEmail" type="email" autocomplete="email" required></label><label>Nuova password<input id="signupPass" type="password" autocomplete="new-password" minlength="8" required></label><button type="submit" class="secondary">Crea account</button></form><p class="hint">Per entrare nella Casa dolce casa servirà anche un invito del proprietario.</p></details><section id="familyOnline" hidden><p id="familyHouse"></p><p id="familyCount"></p><button type="button" class="primary" id="familyPremiumTest" style="margin:10px 0">💜 Prova abbonamento Premium (Stripe Sandbox)</button><p class="hint">Solo ambiente di test: nessun addebito reale.</p><button type="button" class="secondary" id="familyReload">Aggiorna inventario</button><button type="button" class="secondary" id="familyRename">Rinomina oggetto di prova</button><button type="button" class="secondary" id="familyExit">Esci</button></section><p class="hint" id="familyMsg" role="status">Gli oggetti online compariranno nella sezione Oggetti dopo l’accesso.</p>';
+panel.innerHTML='<h3>🏡 Casa dolce casa</h3><form id="familyForm"><label>Email<input type="email" id="familyEmail" required autocomplete="email"></label><label>Password<input type="password" id="familyPass" required autocomplete="current-password"></label><button class="primary">Accedi</button></form><details id="familySignupBox"><summary>Crea un accesso personale</summary><form id="familySignup"><label>Email personale<input id="signupEmail" type="email" autocomplete="email" required></label><label>Nuova password<input id="signupPass" type="password" autocomplete="new-password" minlength="8" required></label><button type="submit" class="secondary">Crea account</button></form><p class="hint">Per entrare nella Casa dolce casa servirà anche un invito del proprietario.</p></details><section id="familyOnline" hidden><p id="familyHouse"></p><p id="familyCount"></p><p id="familyPremiumStatus" class="hint">💜 Stato Premium: verifica in corso…</p><button type="button" class="primary" id="familyPremiumTest" style="margin:10px 0">💜 Prova abbonamento Premium (Stripe Sandbox)</button><p class="hint">Solo ambiente di test: nessun addebito reale.</p><button type="button" class="secondary" id="familyReload">Aggiorna inventario</button><button type="button" class="secondary" id="familyRename">Rinomina oggetto di prova</button><button type="button" class="secondary" id="familyExit">Esci</button></section><p class="hint" id="familyMsg" role="status">Gli oggetti online compariranno nella sezione Oggetti dopo l’accesso.</p>';
 home.append(panel);
 const el=id=>document.getElementById(id);
 let token=null,house=null,sending=false;
@@ -93,6 +93,50 @@ async function familyFetch(url,options={}){
  return response;
 }
 async function get(path,t){const r=await familyFetch(base+path,{headers:{apikey:key,Authorization:'Bearer '+t},cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.message||'Errore di lettura');return d}
+function premiumEnabled(status){return status==='trialing'||status==='active'}
+function formatPremiumDate(value){
+ if(!value)return '';
+ const d=new Date(value);
+ if(Number.isNaN(d.getTime()))return '';
+ return new Intl.DateTimeFormat('it-IT',{day:'2-digit',month:'2-digit',year:'numeric'}).format(d);
+}
+async function loadPremiumStatus(){
+ if(!token||!house)return null;
+ const statusEl=el('familyPremiumStatus');
+ const button=el('familyPremiumTest');
+ statusEl.textContent='💜 Stato Premium: verifica in corso…';
+ try{
+  const rows=await get('/rest/v1/home_subscriptions?select=status,trial_end,current_period_end,cancel_at_period_end,stripe_price_id&home_id=eq.'+encodeURIComponent(house.id),token);
+  const sub=Array.isArray(rows)&&rows.length?rows[0]:null;
+  if(!sub){
+   statusEl.textContent='💜 Premium non attivo.';
+   button.disabled=false;
+   button.textContent='💜 Prova abbonamento Premium (Stripe Sandbox)';
+   document.documentElement.dataset.premium='false';
+   return null;
+  }
+  const enabled=premiumEnabled(sub.status);
+  document.documentElement.dataset.premium=enabled?'true':'false';
+  if(enabled){
+   const until=formatPremiumDate(sub.current_period_end||sub.trial_end);
+   const label=sub.status==='trialing'?'Prova Premium attiva':'Premium attivo';
+   statusEl.textContent='💜 '+label+(until?' · fino al '+until:'')+(sub.cancel_at_period_end?' · rinnovo disattivato':'');
+   button.disabled=true;
+   button.textContent='✓ Premium già attivo';
+  }else{
+   statusEl.textContent='💜 Stato abbonamento: '+String(sub.status||'non attivo');
+   button.disabled=false;
+   button.textContent='💜 Prova abbonamento Premium (Stripe Sandbox)';
+  }
+  window.dispatchEvent(new CustomEvent('dlm-premium-status',{detail:{enabled,subscription:sub}}));
+  return sub;
+ }catch(error){
+  statusEl.textContent='💜 Stato Premium non leggibile: '+error.message;
+  button.disabled=false;
+  document.documentElement.dataset.premium='unknown';
+  return null;
+ }
+}
 const PLACE_PHOTOS_KEY='dlm-test-location-photos-v37';
 function localPlacePhotos(){try{return JSON.parse(localStorage.getItem(PLACE_PHOTOS_KEY)||'{}')}catch{return {}}}
 async function syncPlacePhotos(){
@@ -165,7 +209,7 @@ el('familyForm').onsubmit=async e=>{
  const houses=await get('/rest/v1/homes?select=id',d.access_token);
  if(houses.length!==1)throw Error('Questa prova richiede una sola casa');
  token=d.access_token;refreshToken=d.refresh_token;localStorage.setItem(SESSION_KEY,refreshToken);house=houses[0];el('familyHouse').textContent='🏡 Casa dolce casa';
- el('familyCount').textContent='Modalità test pagamenti: inventario non richiesto.';el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
+ el('familyCount').textContent='Modalità test pagamenti: inventario non richiesto.';el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;await loadPremiumStatus();
  }catch(err){notice('Errore: '+err.message)}finally{btn.disabled=false}
 };
 async function uploadNew(){
@@ -277,6 +321,8 @@ el('familyRename').onclick=async()=>{
 };
 el('familyPremiumTest').onclick=async()=>{
  if(!token||!house){notice('Accedi a Casa dolce casa prima di provare Premium.');return}
+ const current=await loadPremiumStatus();
+ if(current&&premiumEnabled(current.status)){notice('Premium è già attivo per questa casa.');return}
  const button=el('familyPremiumTest');button.disabled=true;
  notice('Preparazione del pagamento di prova…');
  try{
@@ -292,7 +338,7 @@ el('familyPremiumTest').onclick=async()=>{
   window.location.assign(url);
  }catch(error){notice('Stripe Sandbox: '+error.message);button.disabled=false}
 };
-el('familyReload').onclick=()=>syncEdits().then(load).then(uploadNew).catch(err=>notice(err.message));
+el('familyReload').onclick=()=>syncEdits().then(load).then(uploadNew).then(loadPremiumStatus).catch(err=>notice(err.message));
 el('familyExit').onclick=()=>{localStorage.removeItem(SESSION_KEY);refreshToken=null;token=null;house=null;el('familyForm').hidden=false;el('familySignupBox').hidden=false;el('familyOnline').hidden=true;notice('Disconnessa. I dati già caricati restano in questa copia di prova.')};
 async function restoreSession(){
  const saved=localStorage.getItem(SESSION_KEY);
@@ -305,6 +351,7 @@ async function restoreSession(){
   if(houses.length!==1)throw Error('Casa non disponibile');
   house=houses[0];el('familyHouse').textContent='🏡 Casa dolce casa';
   el('familyCount').textContent='Modalità test pagamenti: inventario non richiesto.';el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
+  await loadPremiumStatus();
   notice('Accesso ripristinato.');
  }catch(e){
   if(!navigator.onLine||e instanceof TypeError){notice('Connessione non disponibile: gli oggetti salvati restano consultabili. Riprova quando torni online.');return}
