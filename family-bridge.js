@@ -119,12 +119,16 @@ async function loadPremiumStatus(){
   const enabled=!FORCE_FREE_TEST&&premiumEnabled(sub.status);
   document.documentElement.dataset.premium=enabled?'true':'false';
   window.dlmRefreshLimits?.();
-  if(enabled){
+  if(FORCE_FREE_TEST){
+   statusEl.textContent='🧪 Piano GRATUITO simulato · '+db.items.length+'/30 elementi · Premium reale non modificato';
+   button.disabled=true;
+   button.textContent='🧪 Premium ignorato solo per questo test';
+  }else if(enabled){
    const until=formatPremiumDate(sub.current_period_end||sub.trial_end);
    const label=sub.status==='trialing'?'Prova Premium attiva':'Premium attivo';
-   statusEl.textContent=FORCE_FREE_TEST?'🧪 Modalità TEST piano gratuito · abbonamento reale non modificato':'💜 '+label+(until?' · fino al '+until:'')+(sub.cancel_at_period_end?' · rinnovo disattivato':'');
-   button.disabled=FORCE_FREE_TEST?false:true;
-   button.textContent=FORCE_FREE_TEST?'💜 Prova abbonamento Premium (Stripe Sandbox)':'✓ Premium già attivo';
+   statusEl.textContent='💜 '+label+(until?' · fino al '+until:'')+(sub.cancel_at_period_end?' · rinnovo disattivato':'');
+   button.disabled=true;
+   button.textContent='✓ Premium già attivo';
   }else{
    statusEl.textContent='💜 Stato abbonamento: '+String(sub.status||'non attivo');
    button.disabled=false;
