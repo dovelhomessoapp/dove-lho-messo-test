@@ -1,4 +1,15 @@
-const KEY='dlm-test-v1';const DRAFT_KEY='dlm-test-draft-v1';const FREE_ITEM_LIMIT=30;const FORCE_FREE_TEST=true;let db={places:[],items:[]},photoData='',stream=null,scanTimer=null,editing=null;try{db=JSON.parse(localStorage.getItem(KEY))||db}catch{};const $=s=>document.querySelector(s);const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db));return true}catch(e){toast('Memoria piena: usa foto più leggere');return false}};const uid=()=>Math.random().toString(36).slice(2,10).toUpperCase();const placeName=id=>db.places.find(x=>x.id===id)?.name||'Posizione non assegnata';const premiumActive=()=>!FORCE_FREE_TEST&&document.documentElement.dataset.premium==='true';function freeLimitReached(){return !premiumActive()&&db.items.length>=FREE_ITEM_LIMIT}function freeLimitMessage(){return `Hai raggiunto il limite gratuito di ${FREE_ITEM_LIMIT} elementi. Attiva Premium per aggiungerne altri. 💜`}window.dlmRefreshLimits=()=>{document.querySelectorAll('[data-page="add"]').forEach(b=>{b.disabled=false;b.setAttribute('aria-disabled',freeLimitReached()?'true':'false');b.title=freeLimitReached()?freeLimitMessage():''});renderStats()};function ensureFreeTestTools(){
+const KEY='dlm-test-v1';const DRAFT_KEY='dlm-test-draft-v1';const FREE_ITEM_LIMIT=30;const FORCE_FREE_TEST=true;let db={places:[],items:[]},photoData='',stream=null,scanTimer=null,editing=null;try{db=JSON.parse(localStorage.getItem(KEY))||db}catch{};const $=s=>document.querySelector(s);const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(db));return true}catch(e){toast('Memoria piena: usa foto più leggere');return false}};const uid=()=>Math.random().toString(36).slice(2,10).toUpperCase();const placeName=id=>db.places.find(x=>x.id===id)?.name||'Posizione non assegnata';const premiumActive=()=>!FORCE_FREE_TEST&&document.documentElement.dataset.premium==='true';function freeLimitReached(){return !premiumActive()&&db.items.length>=FREE_ITEM_LIMIT}function freeLimitMessage(){return `Hai raggiunto il limite gratuito di ${FREE_ITEM_LIMIT} elementi. Attiva Premium per aggiungerne altri. 💜`}
+window.dlmTryAdd=function(isBook=false){
+ if(freeLimitReached()){
+   alert(freeLimitMessage());
+   return false;
+ }
+ editing=null;
+ resetForm();
+ if(isBook){$('#kind').value='book';updateKind()}else{localStorage.removeItem(DRAFT_KEY);updateKind()}
+ page('add');
+ return false;
+};window.dlmRefreshLimits=()=>{document.querySelectorAll('[data-page="add"]').forEach(b=>{b.disabled=false;b.setAttribute('aria-disabled',freeLimitReached()?'true':'false');b.title=freeLimitReached()?freeLimitMessage():''});renderStats()};function ensureFreeTestTools(){
  if(!FORCE_FREE_TEST)return;
  let host=document.getElementById('freeTestTools');
  if(!host){
