@@ -1,7 +1,7 @@
 /* Versione famiglia in prova: sincronizzazione controllata. */
 (()=>{
-const base='https://ephdnunjudbwlgbxdadm.supabase.co';
-const key='sb_publishable_3kcIRxESMdgXMEwvFs3_0A_0JZkJqZT';
+const base='https://akuonoghksfjsrwhaxhs.supabase.co';
+const key='sb_publishable_c_31PwX0vyR4Ym8AEg5U6g_NlBDhE82';
 const home=document.getElementById('home');
 const panel=document.createElement('section');panel.className='panel';
 panel.innerHTML='<h3>🏡 Casa dolce casa</h3><form id="familyForm"><label>Email<input type="email" id="familyEmail" required autocomplete="email"></label><label>Password<input type="password" id="familyPass" required autocomplete="current-password"></label><button class="primary">Accedi</button></form><details id="familySignupBox"><summary>Crea un accesso personale</summary><form id="familySignup"><label>Email personale<input id="signupEmail" type="email" autocomplete="email" required></label><label>Nuova password<input id="signupPass" type="password" autocomplete="new-password" minlength="8" required></label><button type="submit" class="secondary">Crea account</button></form><p class="hint">Per entrare nella Casa dolce casa servirà anche un invito del proprietario.</p></details><section id="familyOnline" hidden><p id="familyHouse"></p><p id="familyCount"></p><button type="button" class="secondary" id="familyReload">Aggiorna inventario</button><button type="button" class="secondary" id="familyRename">Rinomina oggetto di prova</button><button type="button" class="secondary" id="familyExit">Esci</button></section><p class="hint" id="familyMsg" role="status">Gli oggetti online compariranno nella sezione Oggetti dopo l’accesso.</p>';
