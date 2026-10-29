@@ -4,7 +4,7 @@ const base='https://akuonoghksfjsrwhaxhs.supabase.co';const FORCE_FREE_TEST=new 
 const key='sb_publishable_c_31PwX0vyR4Ym8AEg5U6g_NlBDhE82';
 const home=document.getElementById('home');
 const panel=document.createElement('section');panel.className='panel';
-panel.innerHTML='<h3>🏡 Casa dolce casa</h3><form id="familyForm"><label>Email<input type="email" id="familyEmail" required autocomplete="email"></label><label>Password<input type="password" id="familyPass" required autocomplete="current-password"></label><button class="primary">Accedi</button></form><details id="familySignupBox"><summary>Crea un accesso personale</summary><form id="familySignup"><label>Email personale<input id="signupEmail" type="email" autocomplete="email" required></label><label>Nuova password<input id="signupPass" type="password" autocomplete="new-password" minlength="8" required></label><button type="submit" class="secondary">Crea account</button></form><p class="hint">Per entrare nella Casa dolce casa servirà anche un invito del proprietario.</p></details><section id="familyOnline" hidden><p id="familyHouse"></p><p id="familyCount"></p><p id="familyPremiumStatus" class="hint">💜 Stato Premium: verifica in corso…</p><button type="button" class="primary" id="familyPremiumTest" style="margin:10px 0">💜 Prova abbonamento Premium (Stripe Sandbox)</button><p class="hint">Solo ambiente di test: nessun addebito reale.</p><button type="button" class="secondary" id="familyReload">Aggiorna inventario</button><button type="button" class="secondary" id="familyRename">Rinomina oggetto di prova</button><button type="button" class="secondary" id="familyExit">Esci</button></section><p class="hint" id="familyMsg" role="status">Gli oggetti online compariranno nella sezione Oggetti dopo l’accesso.</p>';
+panel.innerHTML='<h3>🏡 Casa dolce casa</h3><form id="familyForm"><label>Email<input type="email" id="familyEmail" required autocomplete="email"></label><label>Password<input type="password" id="familyPass" required autocomplete="current-password"></label><button class="primary">Accedi</button></form><details id="familySignupBox"><summary>Crea un accesso personale</summary><form id="familySignup"><label>Email personale<input id="signupEmail" type="email" autocomplete="email" required></label><label>Nuova password<input id="signupPass" type="password" autocomplete="new-password" minlength="8" required></label><button type="submit" class="secondary">Crea account</button></form><p class="hint">Per entrare nella Casa dolce casa servirà anche un invito del proprietario.</p></details><section id="familyOnline" hidden><p id="familyHouse"></p><p id="familyCount"></p><p id="familyPremiumStatus" class="hint">💜 Stato Premium: verifica in corso…</p><div id="familyFreeTestTools" style="display:none;margin:12px 0"><p class="hint"><strong>🧪 Test rapido limite gratuito</strong></p><div class="row"><button type="button" class="secondary" id="familySeed30">Crea 30 elementi test</button><button type="button" class="secondary" id="familyClear30">Rimuovi elementi test</button></div></div><button type="button" class="primary" id="familyPremiumTest" style="margin:10px 0">💜 Prova abbonamento Premium (Stripe Sandbox)</button><p class="hint">Solo ambiente di test: nessun addebito reale.</p><button type="button" class="secondary" id="familyReload">Aggiorna inventario</button><button type="button" class="secondary" id="familyRename">Rinomina oggetto di prova</button><button type="button" class="secondary" id="familyExit">Esci</button></section><p class="hint" id="familyMsg" role="status">Gli oggetti online compariranno nella sezione Oggetti dopo l’accesso.</p>';
 home.append(panel);
 const el=id=>document.getElementById(id);
 let token=null,house=null,sending=false;
@@ -121,30 +121,8 @@ async function loadPremiumStatus(){
   window.dlmRefreshLimits?.();
   if(FORCE_FREE_TEST){
    statusEl.textContent='🧪 Piano GRATUITO simulato · '+db.items.length+'/30 elementi · Premium reale non modificato';
-   let toolsBox=el('familyFreeTestTools');
-   if(!toolsBox){
-    toolsBox=document.createElement('div');
-    toolsBox.id='familyFreeTestTools';
-    toolsBox.style.margin='12px 0';
-    toolsBox.innerHTML='<p class="hint"><strong>🧪 Test rapido limite gratuito</strong></p><div class="row"><button type="button" class="secondary" id="familySeed30">Crea 30 elementi test</button><button type="button" class="secondary" id="familyClear30">Rimuovi elementi test</button></div>';
-    statusEl.insertAdjacentElement('afterend',toolsBox);
-    el('familySeed30').onclick=()=>{
-      const existing=db.items.filter(x=>x.testSeed===true).length;
-      const toAdd=Math.max(0,30-db.items.length);
-      for(let n=0;n<toAdd;n++)db.items.push({id:crypto.randomUUID(),kind:'object',name:'Elemento test '+String(existing+n+1).padStart(2,'0'),author:'',barcode:'',desc:'Creato automaticamente per test limite piano gratuito',place:'',value:'',photo:'',created:Date.now()+n,testSeed:true});
-      localStorage.setItem('dlm-test-v1',JSON.stringify(db));
-      window.dlmRefreshLimits?.();
-      statusEl.textContent='🧪 Piano GRATUITO simulato · '+db.items.length+'/30 elementi · Premium reale non modificato';
-      notice(toAdd?'Creati '+toAdd+' elementi test. Ora prova ad aggiungerne un altro.':'Sei già a 30/30 elementi.');
-    };
-    el('familyClear30').onclick=()=>{
-      db.items=db.items.filter(x=>x.testSeed!==true);
-      localStorage.setItem('dlm-test-v1',JSON.stringify(db));
-      window.dlmRefreshLimits?.();
-      statusEl.textContent='🧪 Piano GRATUITO simulato · '+db.items.length+'/30 elementi · Premium reale non modificato';
-      notice('Elementi test rimossi.');
-    };
-   }
+   const toolsBox=el('familyFreeTestTools');
+   if(toolsBox) toolsBox.style.display='block';
    button.disabled=true;
    button.textContent='🧪 Premium ignorato solo per questo test';
   }else if(enabled){
@@ -368,6 +346,24 @@ el('familyPremiumTest').onclick=async()=>{
   if(typeof url!=='string'||!url.startsWith('https://checkout.stripe.com/'))throw Error('Stripe non ha restituito un link Checkout valido');
   window.location.assign(url);
  }catch(error){notice('Stripe Sandbox: '+error.message);button.disabled=false}
+};
+el('familySeed30').onclick=()=>{
+ const existing=db.items.filter(x=>x.testSeed===true).length;
+ const toAdd=Math.max(0,30-db.items.length);
+ for(let n=0;n<toAdd;n++)db.items.push({id:crypto.randomUUID(),kind:'object',name:'Elemento test '+String(existing+n+1).padStart(2,'0'),author:'',barcode:'',desc:'Creato automaticamente per test limite piano gratuito',place:'',value:'',photo:'',created:Date.now()+n,testSeed:true});
+ localStorage.setItem('dlm-test-v1',JSON.stringify(db));
+ renderItems?.();
+ window.dlmRefreshLimits?.();
+ el('familyPremiumStatus').textContent='🧪 Piano GRATUITO simulato · '+db.items.length+'/30 elementi · Premium reale non modificato';
+ notice(toAdd?'Creati '+toAdd+' elementi test. Ora prova ad aggiungerne un altro.':'Sei già a 30/30 elementi.');
+};
+el('familyClear30').onclick=()=>{
+ db.items=db.items.filter(x=>x.testSeed!==true);
+ localStorage.setItem('dlm-test-v1',JSON.stringify(db));
+ renderItems?.();
+ window.dlmRefreshLimits?.();
+ el('familyPremiumStatus').textContent='🧪 Piano GRATUITO simulato · '+db.items.length+'/30 elementi · Premium reale non modificato';
+ notice('Elementi test rimossi.');
 };
 el('familyReload').onclick=()=>syncEdits().then(load).then(uploadNew).then(loadPremiumStatus).catch(err=>notice(err.message));
 el('familyExit').onclick=()=>{localStorage.removeItem(SESSION_KEY);refreshToken=null;token=null;house=null;document.documentElement.dataset.premium='false';window.dlmRefreshLimits?.();el('familyForm').hidden=false;el('familySignupBox').hidden=false;el('familyOnline').hidden=true;notice('Disconnessa. I dati già caricati restano in questa copia di prova.')};
