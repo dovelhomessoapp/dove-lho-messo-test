@@ -109,14 +109,16 @@ async function loadPremiumStatus(){
   const rows=await get('/rest/v1/home_subscriptions?select=status,trial_end,current_period_end,cancel_at_period_end,stripe_price_id&home_id=eq.'+encodeURIComponent(house.id),token);
   const sub=Array.isArray(rows)&&rows.length?rows[0]:null;
   if(!sub){
-   statusEl.textContent='💜 Premium non attivo.';
+   statusEl.textContent='💜 Piano gratuito · '+db.items.length+'/30 elementi';
    button.disabled=false;
    button.textContent='💜 Prova abbonamento Premium (Stripe Sandbox)';
    document.documentElement.dataset.premium='false';
+   window.dlmRefreshLimits?.();
    return null;
   }
   const enabled=premiumEnabled(sub.status);
   document.documentElement.dataset.premium=enabled?'true':'false';
+  window.dlmRefreshLimits?.();
   if(enabled){
    const until=formatPremiumDate(sub.current_period_end||sub.trial_end);
    const label=sub.status==='trialing'?'Prova Premium attiva':'Premium attivo';
@@ -134,6 +136,7 @@ async function loadPremiumStatus(){
   statusEl.textContent='💜 Stato Premium non leggibile: '+error.message;
   button.disabled=false;
   document.documentElement.dataset.premium='unknown';
+  window.dlmRefreshLimits?.();
   return null;
  }
 }
@@ -339,7 +342,7 @@ el('familyPremiumTest').onclick=async()=>{
  }catch(error){notice('Stripe Sandbox: '+error.message);button.disabled=false}
 };
 el('familyReload').onclick=()=>syncEdits().then(load).then(uploadNew).then(loadPremiumStatus).catch(err=>notice(err.message));
-el('familyExit').onclick=()=>{localStorage.removeItem(SESSION_KEY);refreshToken=null;token=null;house=null;el('familyForm').hidden=false;el('familySignupBox').hidden=false;el('familyOnline').hidden=true;notice('Disconnessa. I dati già caricati restano in questa copia di prova.')};
+el('familyExit').onclick=()=>{localStorage.removeItem(SESSION_KEY);refreshToken=null;token=null;house=null;document.documentElement.dataset.premium='false';window.dlmRefreshLimits?.();el('familyForm').hidden=false;el('familySignupBox').hidden=false;el('familyOnline').hidden=true;notice('Disconnessa. I dati già caricati restano in questa copia di prova.')};
 async function restoreSession(){
  const saved=localStorage.getItem(SESSION_KEY);
  if(!saved)return;
