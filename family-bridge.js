@@ -162,7 +162,7 @@ el('familyForm').onsubmit=async e=>{
  try{
  const r=await fetch(base+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:key,'Content-Type':'application/json'},body:JSON.stringify({email:el('familyEmail').value.trim(),password:el('familyPass').value})});
  const d=await r.json();el('familyPass').value='';if(!r.ok)throw Error(d.msg||d.message||'Accesso non riuscito');
- const houses=await get('/rest/v1/homes?select=id,name',d.access_token);
+ const houses=await get('/rest/v1/homes?select=id',d.access_token);
  if(houses.length!==1)throw Error('Questa prova richiede una sola casa');
  token=d.access_token;refreshToken=d.refresh_token;localStorage.setItem(SESSION_KEY,refreshToken);house=houses[0];el('familyHouse').textContent='🏡 Casa dolce casa';
  await load();await syncEdits();await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
@@ -301,7 +301,7 @@ async function restoreSession(){
  if(!navigator.onLine){notice('Sei offline: puoi consultare gli oggetti già salvati. L’accesso familiare riprenderà quando torna Internet.');return}
  try{
   await renew();
-  const houses=await get('/rest/v1/homes?select=id,name',token);
+  const houses=await get('/rest/v1/homes?select=id',token);
   if(houses.length!==1)throw Error('Casa non disponibile');
   house=houses[0];el('familyHouse').textContent='🏡 Casa dolce casa';
   await load();await syncEdits();await load();await uploadNew();el('familyForm').hidden=true;el('familySignupBox').hidden=true;el('familyOnline').hidden=false;
